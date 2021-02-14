@@ -71,7 +71,7 @@
     <Compile Include="Panel.Designer.cs">
       <DependentUpon>Panel.cs</DependentUpon>
     </Compile>
-    <Compile Include="Models\OPCGroups.cs" />
+    <Compile Include="Models\OPCController.cs" />
     <Compile Include="Models\OPCItems.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -246,7 +246,7 @@ namespace PLCTools.Service
             }
             return -1;
         }
-        public void RefreshFromEvents(OPCGroups opcgroup)
+        public void RefreshFromEvents(OPCController opcgroup)
         {
             for (int opcIndex = 1; opcIndex < opcgroup.TotalItemNumber + 1; opcIndex++)
             {
@@ -279,7 +279,7 @@ namespace PLCTools.Service
                 }
             }
         }
-        public void RefreshFromGroup(OPCGroups opcgroup)
+        public void RefreshFromGroup(OPCController opcgroup)
         {
             for (int index = 1; index < opcgroup.TotalItemNumber + 1; index++)
             {

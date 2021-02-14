@@ -10,11 +10,11 @@ namespace PLCTools.Components
 {
     class PLCAutomation
     {
-        internal BindingList<OPCItems> PLCData { get; set; } = new BindingList<OPCItems>();
+        internal BindingList<OPCItems> PLCData = new BindingList<OPCItems>();
         internal string ServerName { get; set; }
         internal string PLCName { get; set; }
         internal bool isDecodeDecimal { get; set; } = true;
-        internal Queue<string> PlcAutoLog { get;set; } = new Queue<string>();
+        internal Queue<string> PlcAutoLog { get; set; } = new Queue<string>();
         internal string OverallQuality { get; set; }
         internal bool WaitEST { get; set; } = false;
         internal bool isCountDown { get; set; } = false;
@@ -63,34 +63,24 @@ namespace PLCTools.Components
         }
         internal void readFromPLC()
         {
-            OPCGroups oPCGroups = new OPCGroups
+            using (OPCController oPCGroups = new OPCController(ServerName, "PLCAutomationRead", PLCName))
             {
-                ServerName = ServerName,
-                GroupName = "Read",
-                PLCName = PLCName
-            };
-            PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["CONNOPC"]);
-            if (oPCGroups.ServerName.Length > 1)
-            {
-                foreach (OPCItems oPCItems in PLCData)
+                PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["CONNOPC"]);
+                if (oPCGroups.ServerName.Length > 1)
                 {
-                    oPCGroups.AddItem(oPCItems.Tag, oPCItems.Address, oPCItems.Description, oPCItems.PLCName);
+                    oPCGroups.GetData(ref PLCData);
+                    string Quality = "Good";
+                    for (int i = 0; i < PLCData.Count; i++)
+                    {
+                        OPCItems oPCItems = oPCGroups.GetTagItem(PLCData[i].Tag);
+                        if (oPCItems.Quality < 192) Quality = "Bad";
+                        PLCData[i].Value = oPCItems.Value;
+                        PLCData[i].Quality = oPCItems.Quality;
+                    }
+                    OverallQuality = Quality;
+                    PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["OPCREAD"]);
                 }
-                oPCGroups.Create();
             }
-            PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["READOPC"]);
-            oPCGroups.GetData();
-            string Quality = "Good";
-            for (int i = 0; i < PLCData.Count; i++)
-            {
-                OPCItems oPCItems = oPCGroups.GetTagItem(PLCData[i].Tag);
-                if (oPCItems.Quality < 192) Quality = "Bad";
-                PLCData[i].Value = oPCItems.Value;
-                PLCData[i].Quality = oPCItems.Quality;
-            }
-            OverallQuality = Quality;
-            PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["OPCREAD"]);
-            oPCGroups = null;
         }
         internal void writeToPLC()
         {
@@ -100,23 +90,10 @@ namespace PLCTools.Components
             writeTaskDic = new Dictionary<string, OPCItems>();
             if (taskList.Count > 0)
             {
-                OPCGroups oPCGroup_write = new OPCGroups
+                using (OPCController oPCGroup_write = new OPCController(ServerName, "Write", PLCName))
                 {
-                    ServerName = ServerName,
-                    GroupName = "Write",
-                    PLCName = PLCName
-                };
-                PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["WRITEOPC"]);
-                System.Array str = new object[taskList.Count + 1];
-                int i = 0;
-                foreach (OPCItems item in taskList)
-                {
-                    str.SetValue(Convert.ToInt32(item.Value), i + 1);
-                    i++;
-                    oPCGroup_write.AddItem(item.Tag, item.Address, item.Description, item.PLCName);
+                    oPCGroup_write.PutData(taskList);
                 }
-                oPCGroup_write.PutData(str);
-                PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["OPCWROTE"]);
             }
         }
         private void refreshPLC(object sender, EventArgs args)

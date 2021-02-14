@@ -9,7 +9,7 @@ namespace PLCTools.Service
 {
     public class OPCGroup_t
     {
-        public OPCGroups opcgroup;
+        public OPCController opcgroup;
         public string tagEvent;
     }
     public class EventsHandler
@@ -178,7 +178,7 @@ namespace PLCTools.Service
                         OPCGroup_t og = new OPCGroup_t
                         {
                             tagEvent = "",
-                            opcgroup = new OPCGroups()
+                            opcgroup = new OPCController()
                         };
                         og.opcgroup.ServerName = sdr[0].ToString().Trim();
                         og.opcgroup.GroupName = "evGroup" + opt.Count;
@@ -215,7 +215,7 @@ namespace PLCTools.Service
                         OPCGroup_t og = new OPCGroup_t
                         {
                             tagEvent = sdr[0].ToString(),
-                            opcgroup = new OPCGroups()
+                            opcgroup = new OPCController()
                         };
                         og.opcgroup.ServerName = sdr[1].ToString().Trim();
                         og.opcgroup.GroupName = "varGroup" + varGroups.Count;
@@ -257,7 +257,7 @@ namespace PLCTools.Service
                         OPCGroup_t og = new OPCGroup_t
                         {
                             tagEvent = "",
-                            opcgroup = new OPCGroups
+                            opcgroup = new OPCController
                             {
                                 ServerName = sdr[0].ToString(),
                                 GroupName = "whereGrp" + whereGroups.Count
@@ -424,7 +424,7 @@ namespace PLCTools.Service
             return Columns;
         }
         /*It creates all the items, for each group of where (group by OPCName)*/
-        private bool CreateItemsFromSelect(string sqlquery, ref OPCGroups opcgroup)
+        private bool CreateItemsFromSelect(string sqlquery, ref OPCController opcgroup)
         {
             Logging log = new Logging(sqlquery);
             try

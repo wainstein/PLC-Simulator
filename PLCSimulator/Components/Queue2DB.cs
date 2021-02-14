@@ -116,6 +116,9 @@ namespace PLCTools.Components
                 }
                 catch (Exception ex)
                 {
+                    query.Completed = false;
+                    query.Command += "\t Error:" + ex.Message;
+                    ResultQueue.Enqueue(query);
                     query.RetryCount++;
                 }
             }

@@ -354,7 +354,6 @@ namespace PLCTools
             PLCDataGrid.DataSource = source;
             var t1 = Task.Run(() =>
             {
-                string text = "";
                 while (_isStarting)
                 {
                     if (PLCSimulatorSwitch.fetch)

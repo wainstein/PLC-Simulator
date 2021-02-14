@@ -219,25 +219,22 @@ namespace PLCTools.Models.InvernalEvents
 
                 if (idxPLCName != -1)
                 {
-                    OPCGroups OPCGrp_w = new OPCGroups
+                    using (OPCController OPCGrp_w = new OPCController(ServerNames[idxPLCName], "Write", PLCNames[idxPLCName]))
                     {
-                        ServerName = ServerNames[idxPLCName],
-                        GroupName = "Write",
-                        PLCName = PLCNames[idxPLCName]
-                    };
-                    System.Array str = new object[CantTags + 1];
-                    List<string> PLCTagNames = new List<string>();
-                    for (int i = 0; i < CantTags; i++)
-                    {
-                        if (Columns[i].ServerName != "" && Columns[i].ServerName != "-")
+                        System.Array str = new object[CantTags + 1];
+                        List<string> PLCTagNames = new List<string>();
+                        for (int i = 0; i < CantTags; i++)
                         {
-                            TagIndex++;
-                            str.SetValue(TagValues[i], i + 1);
-                            PLCTagNames.Add(TagNames[i]);
-                            OPCGrp_w.AddItem(TagNames[i], Register[i], " ", PLCNames[i]);
+                            if (Columns[i].ServerName != "" && Columns[i].ServerName != "-")
+                            {
+                                TagIndex++;
+                                str.SetValue(TagValues[i], i + 1);
+                                PLCTagNames.Add(TagNames[i]);
+                                OPCGrp_w.AddItem(TagNames[i], Register[i], " ", PLCNames[i]);
+                            }
                         }
+                        OPCGrp_w.PutData(str);
                     }
-                    OPCGrp_w.PutData(str);
                 }
             }
             for (int i = 0; i < CantTags; i++)

@@ -49,7 +49,7 @@ namespace PLCTools.Service
 			{
 				this.clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-				addr = Dns.Resolve(this.server).AddressList[0];
+				addr = Dns.GetHostEntry(this.server).AddressList[0];
 				ep = new System.Net.IPEndPoint(addr, this.port);
 
 				this.clientSocket.Connect(ep);

@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using PLCTools.Common;
 using OPCAutomation;
+using System.ComponentModel;
 
 namespace PLCTools.Models
 {
-    public class OPCGroups
+    public class OPCController:IDisposable
     {
         private OPCServer opcgrp_server;
         private OPCGroup opcgrp_group;
@@ -21,6 +22,65 @@ namespace PLCTools.Models
         public string ServerName { get; set; }
         public string PLCName { get; set; }
         public string GroupName { get; set; }
+
+        public OPCController()
+        {
+            Initialization();
+        }
+        public OPCController(string serverName, string plcName, string groupName)
+        {
+            ServerName = serverName;
+            PLCName = plcName;
+            GroupName = groupName;
+            Initialization();
+        }
+
+        private void Initialization()
+        {
+
+        }
+        public void Dispose()
+        {
+            opcgrp_server = null;
+            opcgrp_arrayErrors = null;
+            opcgrp_arrayHandles = null;
+            opcgrp_arrayPaths = null;
+            opcgrp_arrayQualities = null;
+            opcgrp_arraySHandles = null;
+            opcgrp_arrayValues = null;
+            opcgrp_group = null;
+            opcgrp_itemVar = null;
+        }
+        public void GetData(ref List<OPCItems> list)
+        {
+            foreach (OPCItems item in list)
+            {
+                AddItem(item.Tag, item.Address, item.Description, item.PLCName);
+            }
+            this.Create();
+            this.GetData();
+        }
+        public void GetData(ref BindingList<OPCItems> list)
+        {
+            foreach (OPCItems item in list)
+            {
+                AddItem(item.Tag, item.Address, item.Description, item.PLCName);
+            }
+            this.Create();
+            this.GetData();
+        }
+
+        public void PutData(List<OPCItems> list)
+        {
+            System.Array str = new object[list.Count + 1];
+            foreach (OPCItems item in list)
+            {
+                AddItem(item.Tag, item.Address, item.Description, item.PLCName);
+                str.SetValue(Convert.ToInt32(item.Value), list.IndexOf(item) + 1);
+            }
+            this.Create();
+            this.PutData(str);
+        }
 
         public Boolean AddItem(string newTag, string newAddress, string newDescprition, string newPLCName = null)
         {
@@ -264,5 +324,6 @@ namespace PLCTools.Models
                 return false;
             }
         }
+
     }
 }
