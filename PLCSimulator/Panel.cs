@@ -139,6 +139,7 @@ namespace PLCTools
             }
             _isStarting = state;
             setEnabled(this.Stop, state);
+            setEnabled(this.SwitchPanel, state);
             setEnabled(this.tabControl, state);
             setEnabled(this.panelStart, !state);
             setEnabled(this.Start, !state);
@@ -165,6 +166,122 @@ namespace PLCTools
             await t;
             setStatusLabel("All services stopped.");
         }
+        private async void refreshIndicators(int idx)
+        {
+            Control label = this.Indicators.Controls.Find("L" + idx, false)[0];
+            Control transLed = this.Indicators.Controls.Find("T" + idx, false)[0];
+            Control xcieveLed = this.Indicators.Controls.Find("X" + idx, false)[0];
+            var t = Task.Run(() =>
+            {
+                while (_isStarting)
+                {
+                    try
+                    {
+                        if (IntData.OPCControllers.Count >= idx)
+                        {
+                            OPCController item = IntData.OPCControllers[idx - 1];
+                            if (item != null)
+                            {
+                                if (!label.Enabled)
+                                {
+                                    setEnabled(label, true);
+                                    setEnabled(transLed, true);
+                                    setEnabled(xcieveLed, true);
+                                }
+                                if (item.GroupName != label.Text)
+                                {
+                                    setText(label, item.GroupName);
+                                }
+                                if (transLed.BackColor == Color.DimGray)
+                                {
+                                    if (item.TransactionFlag)
+                                    {
+                                        transLed.BackColor = Color.Lime;
+                                        Thread.Sleep(200);
+                                    }
+                                }
+                                else
+                                {
+                                    if (!item.Transacting)
+                                    {
+                                        item.TransactionFlag = false;
+                                        transLed.BackColor = Color.DimGray;
+                                        Thread.Sleep(50);
+                                        for (int i = 0; i < item.TransationSum; i++)
+                                        {
+                                            if (item.Quality == "Good")
+                                            {
+                                                xcieveLed.BackColor = Color.Lime;
+                                            }
+                                            else
+                                            {
+                                                xcieveLed.BackColor = Color.Crimson;
+                                            }
+                                            Thread.Sleep(200 / item.TransationSum);
+                                            xcieveLed.BackColor = Color.DimGray;
+                                            Thread.Sleep(200 / item.TransationSum);
+                                        }
+                                    }
+                                }
+
+                            }
+                            else
+                            {
+                                if (xcieveLed.Text != "(EMPTY)")
+                                {
+                                    setText(label, "(EMPTY)");
+                                    xcieveLed.BackColor = Color.DimGray;
+                                    transLed.BackColor = Color.DimGray;
+                                    setEnabled(label, false);
+                                    setEnabled(transLed, false);
+                                    setEnabled(xcieveLed, false);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (label.Text != "(READY)")
+                            {
+                                if(transLed.BackColor == Color.Lime)
+                                {
+                                    transLed.BackColor = Color.DimGray;
+                                    Thread.Sleep(50);
+                                    xcieveLed.BackColor = Color.Lime;
+                                    Thread.Sleep(200);
+                                    xcieveLed.BackColor = Color.DimGray;
+                                }
+                                Thread.Sleep(500);
+                                setText(label, "(READY)");
+                                setEnabled(label, false);
+                                setEnabled(transLed, false);
+                                setEnabled(xcieveLed, false);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        if (label.Text != "ERROR")
+                        {
+                            setText(xcieveLed, "ERROR");
+                            xcieveLed.BackColor = Color.DimGray;
+                            transLed.BackColor = Color.DimGray;
+                            setEnabled(label, false);
+                            setEnabled(transLed, false);
+                            setEnabled(xcieveLed, false);
+                        }
+                    }
+                    Thread.Sleep(50);
+                }
+            });
+            await t;
+            setText(label, "Channel " + idx);
+            xcieveLed.BackColor = Color.DimGray;
+            transLed.BackColor = Color.DimGray;
+            setEnabled(label, false);
+            setEnabled(transLed, false);
+            setEnabled(xcieveLed, false);
+        }
+
         private async void refreshControls()
         {
             var t = Task.Run(() =>
@@ -349,9 +466,17 @@ namespace PLCTools
             GlobalLogStart();
             plcAuto.PlcAutoLog.Enqueue(messages["OPENCONN"]);
             plcAuto.PLCData = await Task.Run(() => initializing());
+
             progressBar1.Visible = false;
             var source = new BindingSource(plcAuto.PLCData, null);
             PLCDataGrid.DataSource = source;
+            var t = Task.Run(() =>
+            {
+                for (int i = 1; i <= 16; i++)
+                {
+                    refreshIndicators(i);
+                }
+            });
             var t1 = Task.Run(() =>
             {
                 while (_isStarting)

@@ -219,7 +219,7 @@ namespace PLCTools.Models.InvernalEvents
 
                 if (idxPLCName != -1)
                 {
-                    using (OPCController OPCGrp_w = new OPCController(ServerNames[idxPLCName], "Write", PLCNames[idxPLCName]))
+                    using (OPCController OPCGrp_w = new OPCController(ServerNames[idxPLCName], PLCNames[idxPLCName], "TableCmdW"))
                     {
                         System.Array str = new object[CantTags + 1];
                         List<string> PLCTagNames = new List<string>();

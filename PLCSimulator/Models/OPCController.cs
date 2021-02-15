@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using PLCTools.Common;
 using OPCAutomation;
 using System.ComponentModel;
+using System.Threading;
 
 namespace PLCTools.Models
 {
-    public class OPCController:IDisposable
+    public class OPCController : IDisposable
     {
         private OPCServer opcgrp_server;
         private OPCGroup opcgrp_group;
@@ -18,10 +19,15 @@ namespace PLCTools.Models
         private Array opcgrp_arrayPaths = new string[0];
         private Array opcgrp_itemVar = new OPCItems[0];
 
+
         public int TotalItemNumber { get; set; } = 0;
         public string ServerName { get; set; }
         public string PLCName { get; set; }
         public string GroupName { get; set; }
+        public bool Transacting { get; set; } = false;
+        public bool TransactionFlag { get; set; } = false;
+        public string Quality { get; set; } = "Good";
+        public int TransationSum { get; set; } = 0;
 
         public OPCController()
         {
@@ -37,7 +43,7 @@ namespace PLCTools.Models
 
         private void Initialization()
         {
-
+            IntData.OPCControllers.Add(this);
         }
         public void Dispose()
         {
@@ -50,24 +56,50 @@ namespace PLCTools.Models
             opcgrp_arrayValues = null;
             opcgrp_group = null;
             opcgrp_itemVar = null;
+            IntData.OPCControllers.Remove(this);
         }
         public void GetData(ref List<OPCItems> list)
         {
-            foreach (OPCItems item in list)
+            if (TotalItemNumber == 0)
             {
-                AddItem(item.Tag, item.Address, item.Description, item.PLCName);
+                foreach (OPCItems item in list)
+                {
+                    AddItem(item.Tag, item.Address, item.Description, item.PLCName);
+                    this.Create();
+                }
+                this.GetData();
+                for (int i = 0; i < list.Count; i++)
+                {
+                    OPCItems oPCItems = this.GetTagItem(list[i].Tag);
+                    if (oPCItems.Quality < 192) Quality = "Bad";
+                    list[i].Value = oPCItems.Value;
+                    list[i].Quality = oPCItems.Quality;
+                }
             }
-            this.Create();
-            this.GetData();
         }
         public void GetData(ref BindingList<OPCItems> list)
         {
-            foreach (OPCItems item in list)
+            if (TotalItemNumber == 0)
             {
-                AddItem(item.Tag, item.Address, item.Description, item.PLCName);
+                foreach (OPCItems item in list)
+                {
+                    AddItem(item.Tag, item.Address, item.Description, item.PLCName);
+                    this.Create();
+                }
             }
-            this.Create();
             this.GetData();
+            for (int i = 0; i < list.Count; i++)
+            {
+                OPCItems oPCItems = this.GetTagItem(list[i].Tag);
+                if (oPCItems.Quality < 192) Quality = "Bad";
+                if(list[i].Value != oPCItems.Value)
+                {
+                    list[i].Value = oPCItems.Value;
+                    TransationSum += 1;
+
+                }
+                list[i].Quality = oPCItems.Quality;
+            }
         }
 
         public void PutData(List<OPCItems> list)
@@ -80,6 +112,7 @@ namespace PLCTools.Models
             }
             this.Create();
             this.PutData(str);
+            TransationSum = list.Count;
         }
 
         public Boolean AddItem(string newTag, string newAddress, string newDescprition, string newPLCName = null)
@@ -105,16 +138,17 @@ namespace PLCTools.Models
             opcgrp_arrayPaths.SetValue(newPLCName.Trim() + newAddress.Trim(), TotalItemNumber);
             return true;
         }
-        public Boolean GetData(string tagName = "")
+        public Boolean GetData()
         {
             try
             {
+                Transacting = true;
+                TransactionFlag = true;
                 //for (; IntData.readingOPC; ) Thread.Sleep(10);
                 if (IntData.IsOPCConnected)
                 {
                     object timestamps = new object(); //store the timestamp of the read
                     object qualities = new object();
-                    //IntData.readingOPC = true;
                     IntData.IsOPCConnected = true;
                     opcgrp_server = new OPCServer();
                     opcgrp_server.Connect(ServerName);
@@ -123,7 +157,6 @@ namespace PLCTools.Models
                     opcgrp_group.OPCItems.DefaultIsActive = true;
                     opcgrp_group.OPCItems.AddItems(TotalItemNumber, opcgrp_arrayPaths, opcgrp_arrayHandles, out opcgrp_arraySHandles, out opcgrp_arrayErrors);
                     opcgrp_group.SyncRead((short)OPCAutomation.OPCDataSource.OPCDevice, TotalItemNumber, ref opcgrp_arraySHandles, out opcgrp_arrayValues, out opcgrp_arrayErrors, out qualities, out timestamps);
-                    //IntData.readingOPC = false;
                     var qualitiesList = new List<int>();
                     var errorsList = new List<int>();
                     foreach (var quality in (Array)qualities) qualitiesList.Add(Convert.ToInt32(quality));
@@ -149,12 +182,14 @@ namespace PLCTools.Models
                         if (opcitem.Quality == 0)
                         {
                             IntData.IsOPCConnected = false;
+                            Quality = "Bad";
                         }
                         opcgrp_itemVar.SetValue(opcitem, i);
                     }
                     if (!IntData.IsOPCConnected) throw new Exception("The PLC connection is broken!");
                 }
                 opcgrp_server.Disconnect();
+                Transacting = false;
                 //log.Success();
                 return true;
             }
@@ -170,6 +205,8 @@ namespace PLCTools.Models
             OPCServer OPCSvr = new OPCServer();
             try
             {
+                Transacting = true;
+                TransactionFlag = true;
                 IntData.IsOPCConnected = true;
                 opcgrp_server = new OPCServer();
                 opcgrp_server.Connect(ServerName);
@@ -181,6 +218,7 @@ namespace PLCTools.Models
                 opcgrp_group.OPCItems.Remove(TotalItemNumber, ref opcgrp_arraySHandles, out opcgrp_arrayErrors);
                 opcgrp_server.Disconnect();
                 OPCSvr = null;
+                Transacting = false;
                 return true;
             }
             catch (Exception ex)

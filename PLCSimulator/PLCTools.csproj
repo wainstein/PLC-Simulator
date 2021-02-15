@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="Common\IntData.cs" />
     <Compile Include="Components\PLCAutomation.cs" />
+    <Compile Include="LedMatrixControl.cs" />
     <Compile Include="Models\InternalTag.cs" />
     <Compile Include="Models\InvernalEvents\ColumnsCommand.cs" />
     <Compile Include="Models\InvernalEvents\TablesCommand.cs" />

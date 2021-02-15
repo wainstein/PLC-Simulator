@@ -513,7 +513,7 @@ namespace PLCTools.Service
             {
                 if (VarGroups[i].tagEvent == tagevent)
                 {
-                    VarGroups[i].opcgroup.GetData(tagevent);
+                    VarGroups[i].opcgroup.GetData();
                     Tags.RefreshFromGroup(VarGroups[i].opcgroup);
                 }
             }

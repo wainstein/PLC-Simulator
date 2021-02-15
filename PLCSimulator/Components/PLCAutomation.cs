@@ -10,6 +10,7 @@ namespace PLCTools.Components
 {
     class PLCAutomation
     {
+        internal OPCController oPCGroups;
         internal BindingList<OPCItems> PLCData = new BindingList<OPCItems>();
         internal string ServerName { get; set; }
         internal string PLCName { get; set; }
@@ -28,6 +29,7 @@ namespace PLCTools.Components
         {
             this.ServerName = servername;
             this.PLCName = plcname;
+            oPCGroups = new OPCController(ServerName, PLCName, "PLCAutoR");
         }
         internal void queuePLCWrites(int value, string tag)
         {
@@ -63,23 +65,12 @@ namespace PLCTools.Components
         }
         internal void readFromPLC()
         {
-            using (OPCController oPCGroups = new OPCController(ServerName, "PLCAutomationRead", PLCName))
+            PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["CONNOPC"]);
+            if (oPCGroups.ServerName.Length > 1)
             {
-                PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["CONNOPC"]);
-                if (oPCGroups.ServerName.Length > 1)
-                {
-                    oPCGroups.GetData(ref PLCData);
-                    string Quality = "Good";
-                    for (int i = 0; i < PLCData.Count; i++)
-                    {
-                        OPCItems oPCItems = oPCGroups.GetTagItem(PLCData[i].Tag);
-                        if (oPCItems.Quality < 192) Quality = "Bad";
-                        PLCData[i].Value = oPCItems.Value;
-                        PLCData[i].Quality = oPCItems.Quality;
-                    }
-                    OverallQuality = Quality;
-                    PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["OPCREAD"]);
-                }
+                oPCGroups.GetData(ref PLCData);
+                OverallQuality = oPCGroups.Quality;
+                PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["OPCREAD"]);
             }
         }
         internal void writeToPLC()
@@ -90,7 +81,7 @@ namespace PLCTools.Components
             writeTaskDic = new Dictionary<string, OPCItems>();
             if (taskList.Count > 0)
             {
-                using (OPCController oPCGroup_write = new OPCController(ServerName, "Write", PLCName))
+                using (OPCController oPCGroup_write = new OPCController(ServerName, PLCName, "PCLAutoW"))
                 {
                     oPCGroup_write.PutData(taskList);
                 }
