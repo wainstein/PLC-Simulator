@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PLCTools.Models
+namespace PLCTools.Service
 {
     public class InternalTag
     {

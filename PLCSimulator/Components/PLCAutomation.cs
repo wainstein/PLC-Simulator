@@ -2,20 +2,20 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
+using System.Threading.Tasks;
+using PLCTools.Service;
 using PLCTools.Common;
-using PLCTools.Models;
 using Timer = System.Timers.Timer;
 
 namespace PLCTools.Components
 {
-    class PLCAutomation
+    class PLCAutomation : Misc
     {
         internal OPCController oPCGroups;
         internal BindingList<OPCItems> PLCData = new BindingList<OPCItems>();
         internal string ServerName { get; set; }
         internal string PLCName { get; set; }
         internal bool isDecodeDecimal { get; set; } = true;
-        internal Queue<string> PlcAutoLog { get; set; } = new Queue<string>();
         internal string OverallQuality { get; set; }
         internal bool WaitEST { get; set; } = false;
         internal bool isCountDown { get; set; } = false;
@@ -23,13 +23,47 @@ namespace PLCTools.Components
         internal DateTime countingDownTime { get; set; } = DateTime.Now;
         internal DateTime countingUpTime { get; set; } = DateTime.Now;
         internal Queue<string> transmitQueue = new Queue<string>();
-        private static int inTimer = 0;
+        private int writeTimer = 0;
+        private int readTimer = 0;
         private Dictionary<string, OPCItems> writeTaskDic { get; set; } = new Dictionary<string, OPCItems>();
         public PLCAutomation(string servername, string plcname)
         {
             this.ServerName = servername;
             this.PLCName = plcname;
+        }
+        public async void OnStart()
+        {
             oPCGroups = new OPCController(ServerName, PLCName, "PLCAutoR");
+            isConnecting = true;
+            var t1 = Task.Run(() =>
+            {
+                while (isConnecting)
+                {
+                    Task.Run(() =>
+                    {
+                        if (Interlocked.Exchange(ref readTimer, 1) == 0)
+                        {
+                            Read();
+                            Interlocked.Exchange(ref readTimer, 0);
+                        }
+                    });
+                    Thread.Sleep(1000);
+                }
+            });
+            var t = Task.Run(() =>
+            {
+                while (isConnecting)
+                {
+                    Task.Run(() =>
+                    {
+                        Write();
+                    });
+                    Thread.Sleep(500);
+                }
+            });
+            await t;
+            await t1;
+            oPCGroups.Dispose();
         }
         internal void queuePLCWrites(int value, string tag)
         {
@@ -63,41 +97,33 @@ namespace PLCTools.Components
             }
             return null;
         }
-        internal void readFromPLC()
+        internal void Read()
         {
-            PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["CONNOPC"]);
             if (oPCGroups.ServerName.Length > 1)
             {
                 oPCGroups.GetData(ref PLCData);
                 OverallQuality = oPCGroups.Quality;
-                PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["OPCREAD"]);
             }
         }
-        internal void writeToPLC()
+        public void Write()
         {
-            preparedWritesQueue();
-            List<OPCItems> taskList = new List<OPCItems>();
-            foreach (OPCItems item in writeTaskDic.Values) taskList.Add(item);
-            writeTaskDic = new Dictionary<string, OPCItems>();
-            if (taskList.Count > 0)
-            {
-                using (OPCController oPCGroup_write = new OPCController(ServerName, PLCName, "PCLAutoW"))
-                {
-                    oPCGroup_write.PutData(taskList);
-                }
-            }
-        }
-        private void refreshPLC(object sender, EventArgs args)
-        {
-            if (Interlocked.Exchange(ref inTimer, 1) == 0)
+            if (Interlocked.Exchange(ref writeTimer, 1) == 0)
             {
                 if (IntData.IsOPCConnected)
                 {
-                    writeToPLC();
-                    PlcAutoLog.Enqueue(WaitEST ? Panel.messages["WAITEST"] : Panel.messages["STB"]);
-                    Thread.Sleep(1000);
+                    preparedWritesQueue();
+                    List<OPCItems> taskList = new List<OPCItems>();
+                    foreach (OPCItems item in writeTaskDic.Values) taskList.Add(item);
+                    writeTaskDic = new Dictionary<string, OPCItems>();
+                    if (taskList.Count > 0)
+                    {
+                        using (OPCController oPCGroup_write = new OPCController(ServerName, PLCName, "PCLAutoW"))
+                        {
+                            oPCGroup_write.PutData(taskList);
+                        }
+                    }
                 }
-                Interlocked.Exchange(ref inTimer, 0);
+                Interlocked.Exchange(ref writeTimer, 0);
             }
         }
         private void preparedWritesQueue()
@@ -138,7 +164,6 @@ namespace PLCTools.Components
                         queuePLCWrites(0, "DSP_CDOWN_MIN");
                         queuePLCWrites(0, "DSP_CDOWN_SEC");
                         isCountDown = false;
-                        PlcAutoLog.Enqueue(Panel.messages["WAITEST"]);
                     }
                     else
                     {
@@ -241,13 +266,13 @@ namespace PLCTools.Components
         internal void addCountUpMinutes(int minutes)
         {
             queuePLCWrites(Convert.ToInt32(getTagValue("DSP_CUP_MIN")) + minutes, "DSP_CUP_MIN");
-            writeToPLC();
+            Write();
             countingUpTime = countingUpTime.AddMinutes(-minutes);
         }
         internal void addCountDownMinute(int minutes)
         {
             queuePLCWrites(Convert.ToInt32(getTagValue("DSP_CDOWN_MIN")) + minutes, "DSP_CDOWN_MIN");
-            writeToPLC();
+            Write();
             countingDownTime = countingDownTime.AddMinutes(minutes);
         }
     }

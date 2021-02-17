@@ -1,6 +1,6 @@
 ﻿using PLCTools.Common;
 using PLCTools.Components;
-using PLCTools.Models;
+using PLCTools.Service;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -19,15 +19,17 @@ namespace PLCTools
         delegate void SetStatusLabelCallback(string text);
         delegate void SetTextCallback(Control control, string text);
         delegate void SetEnableCallback(Control control, bool state);
+        internal static Queue<string> PlcAutoLog { get; set; } = new Queue<string>();
         public static Queue<string> dspBatchLog { get; set; } = new Queue<string>();
         public static Queue<string> dspBatchMessage { get; set; } = new Queue<string>();
         public static Queue<string> dspBatchMail { get; set; } = new Queue<string>();
         private bool _isStarting { get; set; } = false;
-        private bool _isConnecting { get; set; } = false;
         private DspBatch batch = new DspBatch();
-        private PLCAutomation plcAuto;
-        private static Timer timerPLC { get; set; } = new Timer();
-        private static int inTimer = 0;
+        private OPC2Queue _ws;
+        private Queue2DB _q2DB;
+        private PLCAutomation _plcAuto;
+        private string _connOPC { get; set; }
+        private string _connMSS { get; set; }
         public static string strActionLogPath { get; set; }
         public static string strActionLogDeleteDays { get; set; }
         public static string strConnectionSource { get; set; }
@@ -45,12 +47,8 @@ namespace PLCTools
         public static string strPlcHeartBeatMinute { get; set; }
         public static string strWinMsgSendInd { get; set; }
         public static string strMailPass { get; set; }
-        private static bool _opcState { get; set; } = false;
-        private static bool _opcSubState { get; set; } = false;
         private static bool _dspBatchState { get; set; } = false;
         private static bool _dspBatchSubState { get; set; } = false;
-        private static bool _q2DBState { get; set; } = false;
-        private static bool _q2DBSubState { get; set; } = false;
         internal static Dictionary<string, string> messages { get; set; } = new Dictionary<string, string> {
             { "OPENCONN","reading from DB"},
             { "RETRIVE","Retriving data from database" },
@@ -80,15 +78,20 @@ namespace PLCTools
             {13, "DSP_OR_ACT" },
             {14, "DSP_DISPATCH_OFF" }
         };
+        private static Dictionary<string, Control> leds { get; set; } = new Dictionary<string, Control>();
         public Panel()
         {
             InitializeComponent();
+            foreach (Control control in Indicators.Controls)
+            {
+                leds.Add(control.Name, control);
+            }
             foreach (SwitchControl item in this.PLCDashboard.Controls.OfType<SwitchControl>().Where(item => indicators.Values.Contains(item.Name)))
             {
                 item.DisableSwitch();
             }
         }
-        private BindingList<OPCItems> initializing()
+        private BindingList<OPCItems> initPLCData()
         {
             BindingList<OPCItems> plcData = new BindingList<OPCItems>();
             setEnabled(this.Stop, false);
@@ -103,7 +106,7 @@ namespace PLCTools
                     {
 
                         setEnabled(this.Start, false);
-                        plcAuto.PlcAutoLog.Enqueue(messages["RETRIVE"]);
+                        PlcAutoLog.Enqueue(messages["RETRIVE"]);
                         connection.Open();
                         SqlCommand cmd = new SqlCommand(sqlQuery, connection);
                         SqlDataReader sdr = cmd.ExecuteReader();
@@ -117,13 +120,12 @@ namespace PLCTools
                             plcData.Add(oPCItems);
                         }
                         sdr.Close();
-                        toggleStartButtons(true);
                     }
-                    plcAuto.PlcAutoLog.Enqueue(messages["DBSUCCESS"]);
+                    PlcAutoLog.Enqueue(messages["DBSUCCESS"]);
                 }
                 catch (Exception ex)
                 {
-                    plcAuto.PlcAutoLog.Enqueue(messages["DBFAIL"]);
+                    PlcAutoLog.Enqueue(messages["DBFAIL"]);
                     toggleStartButtons(false);
                     Console.WriteLine(ex);
                 }
@@ -132,9 +134,9 @@ namespace PLCTools
         }
         private void toggleStartButtons(bool state)
         {
-            while (plcAuto.PlcAutoLog.Count > 0)
+            while (PlcAutoLog.Count > 0)
             {
-                setStatusLabel(plcAuto.PlcAutoLog.Dequeue());
+                setStatusLabel(PlcAutoLog.Dequeue());
                 Thread.Sleep(100);
             }
             _isStarting = state;
@@ -148,12 +150,12 @@ namespace PLCTools
         {
             var t = Task.Run(() =>
              {
-                 while (_isStarting || plcAuto.PlcAutoLog.Count > 0)
+                 while (_isStarting || PlcAutoLog.Count > 0)
                  {
-                     if (Quality.Text != plcAuto.OverallQuality) setText(Quality, plcAuto.OverallQuality);
-                     if (plcAuto.PlcAutoLog.Count > 0)
+                     if (Quality.Text != _plcAuto.OverallQuality) setText(Quality, _plcAuto.OverallQuality);
+                     if (PlcAutoLog.Count > 0)
                      {
-                         setStatusLabel(plcAuto.PlcAutoLog.Dequeue());
+                         setStatusLabel(PlcAutoLog.Dequeue());
                          Thread.Sleep(30);
                      }
                      else
@@ -166,13 +168,13 @@ namespace PLCTools
             await t;
             setStatusLabel("All services stopped.");
         }
-        private async void refreshIndicators(int idx)
+        private void refreshIndicators(int idx)
         {
-            Control label = this.Indicators.Controls.Find("L" + idx, false)[0];
-            Control transLed = this.Indicators.Controls.Find("T" + idx, false)[0];
-            Control xcieveLed = this.Indicators.Controls.Find("X" + idx, false)[0];
             var t = Task.Run(() =>
             {
+                Control label = leds["L" + idx];
+                Control transLed = leds["T" + idx];
+                Control xcieveLed = leds["X" + idx];
                 while (_isStarting)
                 {
                     try
@@ -242,7 +244,7 @@ namespace PLCTools
                         {
                             if (label.Text != "(READY)")
                             {
-                                if(transLed.BackColor == Color.Lime)
+                                if (transLed.BackColor == Color.Lime)
                                 {
                                     transLed.BackColor = Color.DimGray;
                                     Thread.Sleep(50);
@@ -250,7 +252,7 @@ namespace PLCTools
                                     Thread.Sleep(200);
                                     xcieveLed.BackColor = Color.DimGray;
                                 }
-                                Thread.Sleep(500);
+                                if (label.Text != "Channel " + idx) Thread.Sleep(500);
                                 setText(label, "(READY)");
                                 setEnabled(label, false);
                                 setEnabled(transLed, false);
@@ -272,77 +274,75 @@ namespace PLCTools
                     }
                     Thread.Sleep(50);
                 }
+                setText(label, "Channel " + idx);
+                xcieveLed.BackColor = Color.DimGray;
+                transLed.BackColor = Color.DimGray;
+                setEnabled(label, false);
+                setEnabled(transLed, false);
+                setEnabled(xcieveLed, false);
             });
-            await t;
-            setText(label, "Channel " + idx);
-            xcieveLed.BackColor = Color.DimGray;
-            transLed.BackColor = Color.DimGray;
-            setEnabled(label, false);
-            setEnabled(transLed, false);
-            setEnabled(xcieveLed, false);
         }
-
         private async void refreshControls()
         {
             var t = Task.Run(() =>
             {
                 bool commitNow = false;
-                while (_isConnecting && _isStarting)
+                while (_plcAuto.isConnecting && _isStarting)
                 {
                     foreach (SwitchControl item in this.PLCDashboard.Controls.OfType<SwitchControl>())
                     {
                         if (!item.fetch)
                         {
-                            if (item.value != plcAuto.getTagValue(item.Name) || item.Pending)
+                            if (item.value != _plcAuto.getTagValue(item.Name) || item.Pending)
                             {
-                                item.value = plcAuto.getTagValue(item.Name);
-                                item.quality = plcAuto.getTagItem(item.Name) == null ? 0 : (plcAuto.getTagItem(item.Name).Quality / 192.0);
+                                item.value = _plcAuto.getTagValue(item.Name);
+                                item.quality = _plcAuto.getTagItem(item.Name) == null ? 0 : (_plcAuto.getTagItem(item.Name).Quality / 192.0);
                             }
                         }
                         else
                         {
-                            plcAuto.queuePLCWrites(item.value, item.Name);
+                            _plcAuto.queuePLCWrites(item.value, item.Name);
                             Thread.Sleep(200);
                             item.fetch = false;
                             commitNow = true;
                         }
-                        if (item.Text != plcAuto.getTagValue(item.Name).ToString())
+                        if (item.Text != _plcAuto.getTagValue(item.Name).ToString())
                         {
-                            this.setText(item, plcAuto.getTagValue(item.Name).ToString());
+                            this.setText(item, _plcAuto.getTagValue(item.Name).ToString());
                         }
                     }
                     foreach (TextBox item in this.PLCDashboard.Controls.OfType<TextBox>())
                     {
-                        if (item.Text != plcAuto.getTagValue(item.Name).ToString())
+                        if (item.Text != _plcAuto.getTagValue(item.Name).ToString())
                         {
-                            this.setText(item, plcAuto.getTagValue(item.Name).ToString());
+                            this.setText(item, _plcAuto.getTagValue(item.Name).ToString());
                         }
                     }
 
                     TimeSpan countdown = new TimeSpan(0);
                     TimeSpan countup = new TimeSpan(0);
-                    if (plcAuto.isCountDown)
+                    if (_plcAuto.isCountDown)
                     {
                         CountDown.BackColor = Color.RoyalBlue;
                         CountDown.ForeColor = Color.WhiteSmoke;
                         CountUp.BackColor = Color.WhiteSmoke;
                         CountUp.ForeColor = Color.Black;
-                        countdown = plcAuto.countingDownTime - DateTime.Now;
+                        countdown = _plcAuto.countingDownTime - DateTime.Now;
                     }
-                    else if (plcAuto.WaitEST)
+                    else if (_plcAuto.WaitEST)
                     {
                         CountDown.BackColor = Color.RoyalBlue;
                         CountDown.ForeColor = Color.WhiteSmoke;
                         CountUp.BackColor = Color.WhiteSmoke;
                         CountUp.ForeColor = Color.Black;
                     }
-                    else if (plcAuto.isCountUp)
+                    else if (_plcAuto.isCountUp)
                     {
                         CountUp.BackColor = Color.RoyalBlue;
                         CountUp.ForeColor = Color.WhiteSmoke;
                         CountDown.BackColor = Color.WhiteSmoke;
                         CountDown.ForeColor = Color.Black;
-                        countup = DateTime.Now - plcAuto.countingUpTime;
+                        countup = DateTime.Now - _plcAuto.countingUpTime;
                     }
                     else
                     {
@@ -361,7 +361,7 @@ namespace PLCTools
                     }
                     if (commitNow)
                     {
-                        plcAuto.writeToPLC();
+                        _plcAuto.Write();
                         commitNow = false;
                     }
                     else
@@ -371,37 +371,20 @@ namespace PLCTools
                 }
             });
             await t;
-            //after stop connections
-            if (timerPLC.Enabled) timerPLC.Stop();
-            for (int i = 0; i < plcAuto.PLCData.Count; i++)
+            foreach (SwitchControl item in this.PLCDashboard.Controls.OfType<SwitchControl>())
             {
-                plcAuto.PLCData[i].Value = 0;
+                item.isSwitch = false;
+                item.value = 0;
             }
-            plcAuto.PlcAutoLog.Enqueue(messages["DISCONN"]);
+            //after stop connections
+            for (int i = 0; i < _plcAuto.PLCData.Count; i++)
+            {
+                _plcAuto.PLCData[i].Value = 0;
+            }
+            PlcAutoLog.Enqueue(messages["DISCONN"]);
             setText(Quality, "");
             setEnabled(ConnectButton, true);
             setEnabled(DisconnectButton, false);
-        }
-        private void refreshPLC(object sender, EventArgs args)
-        {
-            if (Interlocked.Exchange(ref inTimer, 1) == 0)
-            {
-                if (_isStarting)
-                {
-                    if (IntData.IsOPCConnected)
-                    {
-                        plcAuto.writeToPLC();
-                        plcAuto.PlcAutoLog.Enqueue(plcAuto.WaitEST ? messages["WAITEST"] : messages["STB"]);
-                        Thread.Sleep(1000);
-                    }
-                }
-                Interlocked.Exchange(ref inTimer, 0);
-            }
-        }
-        private static string StrLenLimit(string str, int limitation)
-        {
-            int subLen = (limitation / 2) - 2;
-            return str.Length > limitation ? str.Substring(0, subLen) + "...." + str.Substring(str.Length - subLen, subLen) : str;
         }
         private void setStatusLabel(string text)
         {
@@ -411,13 +394,13 @@ namespace PLCTools
             if (this.statusBar.InvokeRequired)
             {
                 SetStatusLabelCallback d = new SetStatusLabelCallback(setStatusLabel);
-                if (this != null && !this.IsDisposed) this.Invoke(d, new object[] { text });
+                if (this.statusBar != null && !this.statusBar.IsDisposed) this.statusBar.Invoke(d, new object[] { text });
             }
             else
             {
-                if (this != null && !this.IsDisposed) this.statusLabel.Text = text;
+                if (this.statusBar != null && !this.statusBar.IsDisposed) this.statusLabel.Text = text;
                 Thread.Sleep(100);
-                if (this != null && !this.IsDisposed) this.statusBar.Refresh();
+                if (this.statusBar != null && !this.statusBar.IsDisposed) this.statusBar.Refresh();
             }
         }
         private void setText(Control control, string text)
@@ -428,7 +411,7 @@ namespace PLCTools
             if (control.InvokeRequired)
             {
                 SetTextCallback d = new SetTextCallback(setText);
-                this.Invoke(d, new object[] { control, text });
+                control.Invoke(d, new object[] { control, text });
             }
             else
             {
@@ -444,39 +427,46 @@ namespace PLCTools
             if (control.InvokeRequired)
             {
                 SetEnableCallback d = new SetEnableCallback(setEnabled);
-                if (this != null && !this.IsDisposed) this.Invoke(d, new object[] { control, state });
+                if (control != null && !control.IsDisposed) control.Invoke(d, new object[] { control, state });
             }
             else
             {
-                if (this != null && !this.IsDisposed) control.Enabled = state;
-                if (this != null && !this.IsDisposed) control.Refresh();
+                if (control != null && !control.IsDisposed) control.Enabled = state;
+                if (control != null && !control.IsDisposed) control.Refresh();
             }
         }
         private void Panel_Load(object sender, EventArgs e)
         {
-            plcAuto = new PLCAutomation(OPCName.Text, PLCName.Text);
+            _plcAuto = new PLCAutomation(OPCName.Text, PLCName.Text);
         }
         private async void Start_Click(object sender, EventArgs e)
         {
             this.ControlBox = false;
             progressBar1.Visible = true;
             _isStarting = true;
+            GlobalLogStart();
             progressBar1.Visible = true;
             progressBar1.Style = ProgressBarStyle.Marquee;
-            GlobalLogStart();
-            plcAuto.PlcAutoLog.Enqueue(messages["OPENCONN"]);
-            plcAuto.PLCData = await Task.Run(() => initializing());
-
-            progressBar1.Visible = false;
-            var source = new BindingSource(plcAuto.PLCData, null);
-            PLCDataGrid.DataSource = source;
+            PlcAutoLog.Enqueue(messages["OPENCONN"]);
+            _plcAuto.PLCData = await Task.Run(() => initPLCData());
             var t = Task.Run(() =>
             {
                 for (int i = 1; i <= 16; i++)
                 {
                     refreshIndicators(i);
+                    Thread.Sleep(20);
                 }
             });
+            IntData.InitializeData();
+            var source = new BindingSource(_plcAuto.PLCData, null);
+            PLCDataGrid.DataSource = source;
+            await t;
+            _connOPC = "Data Source='" + this.DBAddr.Text + "'; Initial Catalog='OPC2DBMS';User id='" + this.DBUser.Text + "'; Password='" + this.DBPwd.Text + "';";
+            _connMSS = "Data Source='" + this.DBAddr.Text + "'; Initial Catalog='MSS';User id='" + this.DBUser.Text + "'; Password='" + this.DBPwd.Text + "';";
+            if (_ws == null) _ws = new OPC2Queue(_connOPC, _connMSS);
+            if (_q2DB == null) _q2DB = new Queue2DB(_connMSS);
+            progressBar1.Visible = false;
+            toggleStartButtons(true);
             var t1 = Task.Run(() =>
             {
                 while (_isStarting)
@@ -494,31 +484,45 @@ namespace PLCTools
                             PLCSimulatorSwitch.fetch = false;
                         }
                     }
-
                     if (OPC2MQSwitch.fetch)
                     {
                         if (OPC2MQSwitch.isSwitch) OPCClientStart_Click(sender, e);
                         OPC2MQSwitch.fetch = false;
-                        _opcState = OPC2MQSwitch.isSwitch;
+                        _ws.isConnecting = OPC2MQSwitch.isSwitch;
                     }
 
                     if (MQ2DBSwitch.fetch)
                     {
-                        if (!_q2DBState) Queue2DBStart_Click(sender, e);
+                        if (!_q2DB.isConnecting) Queue2DBStart_Click(sender, e);
                         MQ2DBSwitch.fetch = false;
-                        _q2DBState = MQ2DBSwitch.isSwitch;
+                        _q2DB.isConnecting = MQ2DBSwitch.isSwitch;
                     }
-
                     if (DSPbatchSwitch.fetch)
                     {
                         if (!_dspBatchState) DSPBatchStart_Click(sender, e);
                         DSPbatchSwitch.fetch = false;
                         _dspBatchState = DSPbatchSwitch.isSwitch;
                     }
-                    PLCSimulatorSwitch.value = _isConnecting ? 1 : 0;
-                    OPC2MQSwitch.value = _opcState ? 1 : 0;
-                    MQ2DBSwitch.value = _q2DBState ? 1 : 0;
-                    DSPbatchSwitch.value = _dspBatchState ? 1 : 0;
+                    if (PLCSimulatorSwitch.isSwitch != _plcAuto.isConnecting || PLCSimulatorSwitch.Pending)
+                    {
+                        PLCSimulatorSwitch.value = _plcAuto.isConnecting ? 1 : 0;
+                        setEnabled(PLCDashboard, _plcAuto.isConnecting);
+                        setEnabled(ConnectButton, !_plcAuto.isConnecting);
+                        setEnabled(DisconnectButton, _plcAuto.isConnecting);
+                    }
+                    if (OPC2MQSwitch.isSwitch != _ws.isConnecting || OPC2MQSwitch.Pending)
+                    {
+                        OPC2MQSwitch.value = _ws.isConnecting ? 1 : 0;
+                        setEnabled(OPCClientStop, _ws.isConnecting);
+                        setEnabled(OPCClientStart, !_ws.isConnecting);
+                    }
+                    if (MQ2DBSwitch.isSwitch != _q2DB.isConnecting || MQ2DBSwitch.Pending)
+                    {
+                        MQ2DBSwitch.value = _q2DB.isConnecting ? 1 : 0;
+                        setEnabled(Queue2DBStop, _q2DB.isConnecting);
+                        setEnabled(Queue2DBStart, !_q2DB.isConnecting);
+                    }
+                    if (DSPbatchSwitch.isSwitch != _dspBatchState || DSPbatchSwitch.Pending) DSPbatchSwitch.value = _dspBatchState ? 1 : 0;
                     Thread.Sleep(100);
                 }
             });
@@ -536,48 +540,27 @@ namespace PLCTools
             setEnabled(this.Stop, false);
             tabControl.SelectedIndex = 0;
         }
-        private async void ConnectButton_Click(object sender, EventArgs e)
+        private void ConnectButton_Click(object sender, EventArgs e)
         {
-            _isConnecting = true;
+            _plcAuto.OnStart();
             refreshControls();
-            timerPLC = new System.Timers.Timer(1000)
-            {
-                AutoReset = true,
-                Enabled = true
-            };
-            timerPLC.Elapsed += new System.Timers.ElapsedEventHandler(refreshPLC);
-            timerPLC.Start();
-            setEnabled(ConnectButton, false);
-            setEnabled(DisconnectButton, true);
-            setEnabled(PLCDashboard, true);
-            var t1 = Task.Run(() =>
-            {
-                while (_isConnecting)
-                {
-                    plcAuto.readFromPLC();
-                    Thread.Sleep(1000);
-                }
-            });
-            await t1;
-            timerPLC.Stop();
-            setEnabled(PLCDashboard, false);
         }
         private void Add5_Click(object sender, EventArgs e)
         {
-            plcAuto.addCountUpMinutes(5);
+            _plcAuto.addCountUpMinutes(5);
         }
         private void Minus5_Click(object sender, EventArgs e)
         {
-            plcAuto.addCountDownMinute(-5);
+            _plcAuto.addCountDownMinute(-5);
         }
         private void DisconnectButton_Click(object sender, EventArgs e)
         {
-            _isConnecting = false;
+            _plcAuto.OnStop();
         }
         private void ToggleDecode_CheckedChanged(object sender, EventArgs e)
         {
-            plcAuto.isDecodeDecimal = ToggleDecode.Checked;
-            if (plcAuto.isDecodeDecimal)
+            _plcAuto.isDecodeDecimal = ToggleDecode.Checked;
+            if (_plcAuto.isDecodeDecimal)
             {
                 foreach (SwitchControl item in this.PLCDashboard.Controls.OfType<SwitchControl>().Where(item => indicators.Values.Contains(item.Name)))
                 {
@@ -700,139 +683,25 @@ namespace PLCTools
         {
             _dspBatchState = false;
         }
-        private async void OPCClientStart_Click(object sender, EventArgs e)
+        private void OPCClientStart_Click(object sender, EventArgs e)
         {
-            _opcState = true;
-            _opcSubState = true;
-            string _connOPC = "Data Source='" + this.DBAddr.Text + "'; Initial Catalog='OPC2DBMS';User id='" + this.DBUser.Text + "'; Password='" + this.DBPwd.Text + "';";
-            string _connMSS = "Data Source='" + this.DBAddr.Text + "'; Initial Catalog='MSS';User id='" + this.DBUser.Text + "'; Password='" + this.DBPwd.Text + "';";
-
-            OPC2Queue _ws = new OPC2Queue(_connOPC, _connMSS);
-            Queue<string> opc2queue = new Queue<string>();
-            setEnabled(OPCClientStop, true);
-            setEnabled(OPCClientStart, false);
-            var t = Task.Run(() =>
-            {
-                try
-                {
-                    opc2queue.Enqueue("Application starting...");
-                    if (opc2queue.Count > 20) opc2queue.Dequeue();
-                    _ws.Onstart();
-                    while (_opcState)
-                    {
-                        if (_ws != null)
-                        {
-                            for (Logging info = _ws.log.FetchInformation(); info != null; info = _ws.log.FetchInformation())
-                            {
-                                opc2queue.Enqueue(info.Function + ": CMD" + StrLenLimit(info.Command, 100) + "\t MSG:" + info.Information);
-                                if (opc2queue.Count > 20) opc2queue.Dequeue();
-                            }
-                            for (Logging warn = _ws.log.FetchWarning(); warn != null; warn = _ws.log.FetchWarning())
-                            {
-                                opc2queue.Enqueue(warn.Function + ": CMD" + StrLenLimit(warn.Command, 100) + "\t MSG:" + warn.Warning);
-                                if (opc2queue.Count > 20) opc2queue.Dequeue();
-                            }
-                            for (Logging fatl = _ws.log.FetchWarning(); fatl != null; fatl = _ws.log.FetchFatal())
-                            {
-                                opc2queue.Enqueue(fatl.Function + ": CMD" + StrLenLimit(fatl.Command, 100) + "\t MSG:" + fatl.Exception.Message);
-                                if (opc2queue.Count > 20) opc2queue.Dequeue();
-                            }
-                        }
-                        Thread.Sleep(100);
-                    }
-                    opc2queue.Enqueue("The application is stoped.");
-                    _ws.OnStop();
-                }
-                catch (Exception ex)
-                {
-                    opc2queue.Enqueue(ex.Message + "The application failed to start.");
-                    if (opc2queue.Count > 20) opc2queue.Dequeue();
-                }
-            });
-            var t1 = Task.Run(() =>
-            {
-                string text = "";
-                while (_opcSubState || opc2queue.Count > 0)
-                {
-                    if (opc2queue.Count > 0) text = opc2queue.Dequeue() + Environment.NewLine + text;
-                    if (text.Split('\r').Length > 20)
-                    {
-                        text = text.Remove(text.LastIndexOf(Environment.NewLine));
-                    }
-                    if (text != OPCClientLog.Text) setText(OPCClientLog, text);
-                    Thread.Sleep(10);
-                }
-            });
-            await t;
-            _opcSubState = false;
-            setEnabled(OPCClientStop, false);
-            setEnabled(OPCClientStart, true);
+            _ws.Onstart();
+            _ws.Log.Enqueue("Application starting...");
+            _ws.LogToTextBox(OPCClientLog, 20);
         }
         private void OPCClientStop_Click(object sender, EventArgs e)
         {
-            _opcState = false;
+            _ws.OnStop();
         }
-        private async void Queue2DBStart_Click(object sender, EventArgs e)
+        private void Queue2DBStart_Click(object sender, EventArgs e)
         {
-
-            _q2DBState = true;
-            _q2DBSubState = true;
-            string _connMSS = "Data Source='" + this.DBAddr.Text + "'; Initial Catalog='MSS';User id='" + this.DBUser.Text + "'; Password='" + this.DBPwd.Text + "';";
-
-            Queue2DB _q2DB = new Queue2DB(_connMSS);
-            Queue<string> queue2DBLog = new Queue<string>();
-            setEnabled(Queue2DBStop, true);
-            setEnabled(Queue2DBStart, false);
-            var t = Task.Run(() =>
-            {
-                try
-                {
-                    queue2DBLog.Enqueue("Application starting...");
-                    if (queue2DBLog.Count > 20) queue2DBLog.Dequeue();
-                    _q2DB.OnStart();
-                    while (_q2DBState || _q2DB.ResultQueue.Count > 0)
-                    {
-                        if (_q2DB.ResultQueue.Count > 0)
-                        {
-                            queue2DBLog.Enqueue(_q2DB.ResultQueue.Dequeue().Command);
-                        }
-                        else
-                        {
-                            Thread.Sleep(300);
-                        }
-
-                    }
-                    queue2DBLog.Enqueue("The application stopped.");
-                    _q2DB.OnStop();
-                }
-                catch (Exception ex)
-                {
-                    queue2DBLog.Enqueue(ex.Message + "The application failed to start.");
-                    if (queue2DBLog.Count > 20) queue2DBLog.Dequeue();
-                }
-            });
-            var t1 = Task.Run(() =>
-            {
-                string text = "";
-                while (_q2DBSubState || queue2DBLog.Count > 0)
-                {
-                    if (queue2DBLog.Count > 0) text = queue2DBLog.Dequeue() + Environment.NewLine + text;
-                    if (text.Split('\r').Length > 20)
-                    {
-                        text = text.Remove(text.LastIndexOf(Environment.NewLine));
-                    }
-                    if (text != OPCClientLog.Text) setText(Queue2DBLog, text);
-                    Thread.Sleep(300);
-                }
-            });
-            await t;
-            _q2DBSubState = false;
-            setEnabled(Queue2DBStop, false);
-            setEnabled(Queue2DBStart, true);
+            _q2DB.OnStart();
+            _q2DB.Log.Enqueue("Application starting...");
+            _q2DB.LogToTextBox(Queue2DBLog, 20);
         }
         private void Queue2DBStop_Click(object sender, EventArgs e)
         {
-            _q2DBState = false;
+            _q2DB.OnStop();
         }
     }
 }

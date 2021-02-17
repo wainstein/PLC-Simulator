@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using PLCTools.Common;
 using PLCTools.Service;
 
-namespace PLCTools.Models.InvernalEvents
+namespace PLCTools.Service.InvernalEvents
 {
     public class TablesCommand
     {

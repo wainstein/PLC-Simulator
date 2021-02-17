@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Data.SqlClient;
 using System.Collections.Generic;
-using PLCTools.Models;
+using PLCTools.Service;
 using PLCTools.Common;
-using PLCTools.Models.InvernalEvents;
+using PLCTools.Service.InvernalEvents;
 
 namespace PLCTools.Service
 {
@@ -12,15 +12,15 @@ namespace PLCTools.Service
         public OPCController opcgroup;
         public string tagEvent;
     }
-    public class EventsHandler
+    public class EventsHandler : IDisposable
     {
         private const int POSITIVE_FLANC = 0;
         private const int NEGATIVE_FLANC = 1;
-        private List<TagEvent> OPCEvents { get; set; } = new List<TagEvent>();
-        private List<TimerEvent> TimerEvents { get; set; } = new List<TimerEvent>();
-        private List<OPCGroup_t> EvGroups { get; set; } = new List<OPCGroup_t>();
-        private List<OPCGroup_t> VarGroups { get; set; } = new List<OPCGroup_t>();
-        private List<OPCGroup_t> WhereGroups { get; set; } = new List<OPCGroup_t>();
+        private List<TagEvent> OPCEvents { get; set; }
+        private List<TimerEvent> TimerEvents { get; set; }
+        private List<OPCGroup_t> EvGroups { get; set; }
+        private List<OPCGroup_t> VarGroups { get; set; }
+        private List<OPCGroup_t> WhereGroups { get; set; }
         public void Init()
         {
             OPCEvents = IntiOPCEvents();
@@ -29,6 +29,35 @@ namespace PLCTools.Service
             VarGroups = InitVarGroup();
             WhereGroups = InitWhereGroup();
 
+        }
+        public void Dispose()
+        {
+            OPCEvents = null;
+            TimerEvents = null;
+            if (EvGroups != null)
+            {
+                foreach (OPCGroup_t opt in EvGroups)
+                {
+                    opt.opcgroup.Dispose();
+                }
+                EvGroups = null;
+            }
+            if (VarGroups != null)
+            {
+                foreach (OPCGroup_t opt in VarGroups)
+                {
+                    opt.opcgroup.Dispose();
+                }
+                VarGroups = null;
+            }
+            if (WhereGroups != null)
+            {
+                foreach (OPCGroup_t opt in WhereGroups)
+                {
+                    opt.opcgroup.Dispose();
+                }
+                WhereGroups = null;
+            }
         }
         public void Refresh(TagHandler Tags)
         {

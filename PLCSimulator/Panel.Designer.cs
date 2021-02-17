@@ -301,6 +301,7 @@
             this.X16.BackColor = System.Drawing.Color.DimGray;
             this.X16.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X16.Enabled = false;
+            this.X16.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X16.Location = new System.Drawing.Point(109, 122);
             this.X16.Name = "X16";
             this.X16.Size = new System.Drawing.Size(6, 6);
@@ -311,6 +312,7 @@
             this.X15.BackColor = System.Drawing.Color.DimGray;
             this.X15.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X15.Enabled = false;
+            this.X15.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X15.Location = new System.Drawing.Point(109, 108);
             this.X15.Name = "X15";
             this.X15.Size = new System.Drawing.Size(6, 6);
@@ -321,6 +323,7 @@
             this.X14.BackColor = System.Drawing.Color.DimGray;
             this.X14.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X14.Enabled = false;
+            this.X14.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X14.Location = new System.Drawing.Point(109, 93);
             this.X14.Name = "X14";
             this.X14.Size = new System.Drawing.Size(6, 6);
@@ -331,6 +334,7 @@
             this.X13.BackColor = System.Drawing.Color.DimGray;
             this.X13.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X13.Enabled = false;
+            this.X13.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X13.Location = new System.Drawing.Point(109, 76);
             this.X13.Name = "X13";
             this.X13.Size = new System.Drawing.Size(6, 6);
@@ -341,6 +345,7 @@
             this.X12.BackColor = System.Drawing.Color.DimGray;
             this.X12.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X12.Enabled = false;
+            this.X12.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X12.Location = new System.Drawing.Point(109, 60);
             this.X12.Name = "X12";
             this.X12.Size = new System.Drawing.Size(6, 6);
@@ -351,6 +356,7 @@
             this.X11.BackColor = System.Drawing.Color.DimGray;
             this.X11.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X11.Enabled = false;
+            this.X11.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X11.Location = new System.Drawing.Point(109, 43);
             this.X11.Name = "X11";
             this.X11.Size = new System.Drawing.Size(6, 6);
@@ -361,6 +367,7 @@
             this.X10.BackColor = System.Drawing.Color.DimGray;
             this.X10.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X10.Enabled = false;
+            this.X10.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X10.Location = new System.Drawing.Point(109, 28);
             this.X10.Name = "X10";
             this.X10.Size = new System.Drawing.Size(6, 6);
@@ -371,6 +378,7 @@
             this.X9.BackColor = System.Drawing.Color.DimGray;
             this.X9.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X9.Enabled = false;
+            this.X9.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X9.Location = new System.Drawing.Point(109, 13);
             this.X9.Name = "X9";
             this.X9.Size = new System.Drawing.Size(6, 6);
@@ -381,6 +389,7 @@
             this.T16.BackColor = System.Drawing.Color.DimGray;
             this.T16.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T16.Enabled = false;
+            this.T16.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T16.Location = new System.Drawing.Point(101, 122);
             this.T16.Name = "T16";
             this.T16.Size = new System.Drawing.Size(6, 6);
@@ -391,6 +400,7 @@
             this.T15.BackColor = System.Drawing.Color.DimGray;
             this.T15.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T15.Enabled = false;
+            this.T15.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T15.Location = new System.Drawing.Point(101, 108);
             this.T15.Name = "T15";
             this.T15.Size = new System.Drawing.Size(6, 6);
@@ -401,6 +411,7 @@
             this.T14.BackColor = System.Drawing.Color.DimGray;
             this.T14.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T14.Enabled = false;
+            this.T14.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T14.Location = new System.Drawing.Point(101, 93);
             this.T14.Name = "T14";
             this.T14.Size = new System.Drawing.Size(6, 6);
@@ -411,6 +422,7 @@
             this.T13.BackColor = System.Drawing.Color.DimGray;
             this.T13.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T13.Enabled = false;
+            this.T13.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T13.Location = new System.Drawing.Point(101, 76);
             this.T13.Name = "T13";
             this.T13.Size = new System.Drawing.Size(6, 6);
@@ -421,6 +433,7 @@
             this.T12.BackColor = System.Drawing.Color.DimGray;
             this.T12.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T12.Enabled = false;
+            this.T12.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T12.Location = new System.Drawing.Point(101, 60);
             this.T12.Name = "T12";
             this.T12.Size = new System.Drawing.Size(6, 6);
@@ -431,6 +444,7 @@
             this.T11.BackColor = System.Drawing.Color.DimGray;
             this.T11.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T11.Enabled = false;
+            this.T11.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T11.Location = new System.Drawing.Point(101, 43);
             this.T11.Name = "T11";
             this.T11.Size = new System.Drawing.Size(6, 6);
@@ -441,6 +455,7 @@
             this.T10.BackColor = System.Drawing.Color.DimGray;
             this.T10.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T10.Enabled = false;
+            this.T10.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T10.Location = new System.Drawing.Point(101, 28);
             this.T10.Name = "T10";
             this.T10.Size = new System.Drawing.Size(6, 6);
@@ -451,6 +466,7 @@
             this.T9.BackColor = System.Drawing.Color.DimGray;
             this.T9.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T9.Enabled = false;
+            this.T9.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T9.Location = new System.Drawing.Point(101, 13);
             this.T9.Name = "T9";
             this.T9.Size = new System.Drawing.Size(6, 6);
@@ -461,6 +477,7 @@
             this.X8.BackColor = System.Drawing.Color.DimGray;
             this.X8.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X8.Enabled = false;
+            this.X8.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X8.Location = new System.Drawing.Point(26, 122);
             this.X8.Name = "X8";
             this.X8.Size = new System.Drawing.Size(6, 6);
@@ -471,6 +488,7 @@
             this.X7.BackColor = System.Drawing.Color.DimGray;
             this.X7.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X7.Enabled = false;
+            this.X7.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X7.Location = new System.Drawing.Point(26, 108);
             this.X7.Name = "X7";
             this.X7.Size = new System.Drawing.Size(6, 6);
@@ -481,6 +499,7 @@
             this.X6.BackColor = System.Drawing.Color.DimGray;
             this.X6.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X6.Enabled = false;
+            this.X6.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X6.Location = new System.Drawing.Point(26, 93);
             this.X6.Name = "X6";
             this.X6.Size = new System.Drawing.Size(6, 6);
@@ -491,6 +510,7 @@
             this.X5.BackColor = System.Drawing.Color.DimGray;
             this.X5.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X5.Enabled = false;
+            this.X5.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X5.Location = new System.Drawing.Point(26, 76);
             this.X5.Name = "X5";
             this.X5.Size = new System.Drawing.Size(6, 6);
@@ -501,6 +521,7 @@
             this.X4.BackColor = System.Drawing.Color.DimGray;
             this.X4.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X4.Enabled = false;
+            this.X4.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X4.Location = new System.Drawing.Point(26, 60);
             this.X4.Name = "X4";
             this.X4.Size = new System.Drawing.Size(6, 6);
@@ -511,6 +532,7 @@
             this.X3.BackColor = System.Drawing.Color.DimGray;
             this.X3.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X3.Enabled = false;
+            this.X3.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X3.Location = new System.Drawing.Point(26, 43);
             this.X3.Name = "X3";
             this.X3.Size = new System.Drawing.Size(6, 6);
@@ -521,6 +543,7 @@
             this.X2.BackColor = System.Drawing.Color.DimGray;
             this.X2.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X2.Enabled = false;
+            this.X2.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X2.Location = new System.Drawing.Point(26, 28);
             this.X2.Name = "X2";
             this.X2.Size = new System.Drawing.Size(6, 6);
@@ -531,6 +554,7 @@
             this.X1.BackColor = System.Drawing.Color.DimGray;
             this.X1.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.X1.Enabled = false;
+            this.X1.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.X1.Location = new System.Drawing.Point(26, 13);
             this.X1.Name = "X1";
             this.X1.Size = new System.Drawing.Size(6, 6);
@@ -733,6 +757,7 @@
             this.T8.BackColor = System.Drawing.Color.DimGray;
             this.T8.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T8.Enabled = false;
+            this.T8.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T8.Location = new System.Drawing.Point(18, 122);
             this.T8.Name = "T8";
             this.T8.Size = new System.Drawing.Size(6, 6);
@@ -743,6 +768,7 @@
             this.T7.BackColor = System.Drawing.Color.DimGray;
             this.T7.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T7.Enabled = false;
+            this.T7.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T7.Location = new System.Drawing.Point(18, 108);
             this.T7.Name = "T7";
             this.T7.Size = new System.Drawing.Size(6, 6);
@@ -753,6 +779,7 @@
             this.T6.BackColor = System.Drawing.Color.DimGray;
             this.T6.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T6.Enabled = false;
+            this.T6.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T6.Location = new System.Drawing.Point(18, 93);
             this.T6.Name = "T6";
             this.T6.Size = new System.Drawing.Size(6, 6);
@@ -763,6 +790,7 @@
             this.T5.BackColor = System.Drawing.Color.DimGray;
             this.T5.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T5.Enabled = false;
+            this.T5.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T5.Location = new System.Drawing.Point(18, 76);
             this.T5.Name = "T5";
             this.T5.Size = new System.Drawing.Size(6, 6);
@@ -773,6 +801,7 @@
             this.T4.BackColor = System.Drawing.Color.DimGray;
             this.T4.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T4.Enabled = false;
+            this.T4.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T4.Location = new System.Drawing.Point(18, 60);
             this.T4.Name = "T4";
             this.T4.Size = new System.Drawing.Size(6, 6);
@@ -783,6 +812,7 @@
             this.T3.BackColor = System.Drawing.Color.DimGray;
             this.T3.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T3.Enabled = false;
+            this.T3.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T3.Location = new System.Drawing.Point(18, 43);
             this.T3.Name = "T3";
             this.T3.Size = new System.Drawing.Size(6, 6);
@@ -793,6 +823,7 @@
             this.T2.BackColor = System.Drawing.Color.DimGray;
             this.T2.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T2.Enabled = false;
+            this.T2.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T2.Location = new System.Drawing.Point(18, 28);
             this.T2.Name = "T2";
             this.T2.Size = new System.Drawing.Size(6, 6);
@@ -803,6 +834,7 @@
             this.T1.BackColor = System.Drawing.Color.DimGray;
             this.T1.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.T1.Enabled = false;
+            this.T1.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.T1.Location = new System.Drawing.Point(18, 13);
             this.T1.Name = "T1";
             this.T1.Size = new System.Drawing.Size(6, 6);

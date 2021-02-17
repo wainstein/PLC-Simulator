@@ -1,7 +1,7 @@
 ﻿using MSMQ;
 using System;
 using PLCTools.Common;
-using PLCTools.Models;
+using PLCTools.Service;
 
 namespace PLCTools.Service
 {

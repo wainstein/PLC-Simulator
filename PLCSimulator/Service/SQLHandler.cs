@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Data.SqlClient;
 using PLCTools.Common;
-using PLCTools.Models;
+using PLCTools.Service;
 
 namespace PLCTools.Service
 {

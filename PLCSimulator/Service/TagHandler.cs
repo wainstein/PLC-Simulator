@@ -1,17 +1,18 @@
 ﻿using PLCTools.Common;
 using PLCTools.Service.MathPaser;
-using PLCTools.Models;
+using PLCTools.Service;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 
 namespace PLCTools.Service
 {
-    public class TagHandler
+    public class TagHandler: IDisposable
     {
-        public List<InternalTag> Values = new List<InternalTag>();
+        public List<InternalTag> Values;
         public void Init()
         {
+            Values = new List<InternalTag>();
             Logging log = new Logging("select Tag, OPCName, Type from PLC2DB_Tags order by tag");
             try
             {
@@ -40,6 +41,9 @@ namespace PLCTools.Service
             {
                 log.Fatal(ex);
             }
+        }
+        public void Dispose() { 
+            Values = null;
         }
         public object GetTagsValue(string tag)
         {

@@ -1,18 +1,15 @@
 ﻿using System;
 using System.Threading;
 using System.Data.SqlClient;
-using PLCTools.Models;
-using PLCTools.Common;
 using PLCTools.Service;
+using PLCTools.Common;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace PLCTools.Components
 {
-    public class Queue2DB
+    public class Queue2DB : Misc
     {
-        private System.Timers.Timer timer;
-
-        public Queue<QueryResult> ResultQueue = new Queue<QueryResult>();
         public class QueryResult
         {
             public string Command { get; set; }
@@ -23,6 +20,8 @@ namespace PLCTools.Components
             public IAsyncResult Result { get; set; }
             public int RetryCount { get; set; } = 0;
         }
+
+        private int inTimer = 0;
         public Queue2DB(string _connTable)
         {
             try
@@ -35,42 +34,35 @@ namespace PLCTools.Components
                 throw new Exception(ex.Message + " Initialization failed");
             }
         }
-        private void Initialization()
-        {
-            timer = new System.Timers.Timer(IntData.timeInterval)
-            {
-                AutoReset = true,
-                Enabled = true
-            };
-            timer.Elapsed += new System.Timers.ElapsedEventHandler(ExecutePriodicJob);
-            timer.Start();
-        }
 
-        private void ExecutePriodicJob(object sender, System.Timers.ElapsedEventArgs e)
-        {
-            MQHandler queue = new MQHandler();
-            string rcvd;
-            do
-            {
-                rcvd = queue.ReceiveMessage(IntData.QUEUE_NAME, IntData.QUEUE_NAME + " Message");//Dequeue the query
-                if (rcvd != "")
-                {
-                    ThreadHandler.ThreadLocker();//Pause the program when thread is locked 
-                    ExecuteSQL(rcvd);
-                }
-            } while (rcvd != "");
-        }
         public void OnStart()
         {
-            Initialization();
-        }
-
-        public void OnStop()
-        {
-            if (timer != null) timer.Stop();
+            isConnecting = true;
+            var t1 = Task.Run(() =>
+            {
+                while (isConnecting)
+                {
+                    if (Interlocked.Exchange(ref inTimer, 1) == 0)
+                    {
+                        MQHandler queue = new MQHandler();
+                        string rcvd;
+                        do
+                        {
+                            rcvd = queue.ReceiveMessage(IntData.QUEUE_NAME, IntData.QUEUE_NAME + " Message");//Dequeue the query
+                            if (rcvd != "")
+                            {
+                                ThreadHandler.ThreadLocker();//Pause the program when thread is locked 
+                                ExecuteSQL(rcvd);
+                            }
+                        } while (rcvd != "");
+                        Interlocked.Exchange(ref inTimer, 0);
+                    }
+                    Thread.Sleep(1000);
+                }
+            });
         }
         private Boolean ExecuteSQL(string commandStr)
-        {   
+        {
 
             string tableName = "";
             string operation = "";
@@ -82,7 +74,7 @@ namespace PLCTools.Components
             {
                 try
                 {
-                    if (ResultQueue.Count > 200) ResultQueue.Dequeue();                    
+                    if (Log.Count > 200) Log.Dequeue();
                     using (SqlConnection connction = new SqlConnection(IntData.DestConn))
                     {
                         query.Command = commandStr;
@@ -100,7 +92,7 @@ namespace PLCTools.Components
                         query.ExecuteTime = SqlLocker(query.Result);
                         query.Completed = true;
                         query.AffectedRecordsets = command.EndExecuteNonQuery(query.Result);
-                        ResultQueue.Enqueue(query);//Queue the query.
+                        Log.Enqueue(query.Command);//Queue the query.
                         if (autoInsert && query.AffectedRecordsets == 0)
                         {
                             command.CommandText = SQLHandler.GenerateInsert(query.Command);
@@ -109,7 +101,7 @@ namespace PLCTools.Components
                             query.IsAutoInsert = true;
                             query.Completed = true;
                             query.AffectedRecordsets = command.EndExecuteNonQuery(query.Result);
-                            ResultQueue.Enqueue(query);//Queue the qurey.
+                            Log.Enqueue(query.Command);//Queue the qurey.
                         }
                     }
                     break;
@@ -118,7 +110,7 @@ namespace PLCTools.Components
                 {
                     query.Completed = false;
                     query.Command += "\t Error:" + ex.Message;
-                    ResultQueue.Enqueue(query);
+                    Log.Enqueue(query.Command);
                     query.RetryCount++;
                 }
             }

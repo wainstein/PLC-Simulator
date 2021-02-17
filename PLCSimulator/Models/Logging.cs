@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using PLCTools.Common;
 
-namespace PLCTools.Models
+namespace PLCTools.Service
 {
     public class Logging
     {

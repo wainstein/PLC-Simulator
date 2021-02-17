@@ -5,7 +5,7 @@ using OPCAutomation;
 using System.ComponentModel;
 using System.Threading;
 
-namespace PLCTools.Models
+namespace PLCTools.Service
 {
     public class OPCController : IDisposable
     {
@@ -40,13 +40,16 @@ namespace PLCTools.Models
             GroupName = groupName;
             Initialization();
         }
-
         private void Initialization()
         {
             IntData.OPCControllers.Add(this);
         }
         public void Dispose()
         {
+            while (Transacting)
+            {
+                Thread.Sleep(10);
+            }
             opcgrp_server = null;
             opcgrp_arrayErrors = null;
             opcgrp_arrayHandles = null;
@@ -60,27 +63,16 @@ namespace PLCTools.Models
         }
         public void GetData(ref List<OPCItems> list)
         {
-            if (TotalItemNumber == 0)
+            if (TotalItemNumber != list.Count)
             {
-                foreach (OPCItems item in list)
-                {
-                    AddItem(item.Tag, item.Address, item.Description, item.PLCName);
-                    this.Create();
-                }
-                this.GetData();
-                for (int i = 0; i < list.Count; i++)
-                {
-                    OPCItems oPCItems = this.GetTagItem(list[i].Tag);
-                    if (oPCItems.Quality < 192) Quality = "Bad";
-                    list[i].Value = oPCItems.Value;
-                    list[i].Quality = oPCItems.Quality;
-                }
-            }
-        }
-        public void GetData(ref BindingList<OPCItems> list)
-        {
-            if (TotalItemNumber == 0)
-            {
+                opcgrp_arrayQualities = new int[0];
+                opcgrp_arrayHandles = new Int32[0];
+                opcgrp_arraySHandles = new int[0];
+                opcgrp_arrayErrors = new int[0];
+                opcgrp_arrayValues = new int[0];
+                opcgrp_arrayPaths = new string[0];
+                opcgrp_itemVar = new OPCItems[0];
+                TotalItemNumber = 0;
                 foreach (OPCItems item in list)
                 {
                     AddItem(item.Tag, item.Address, item.Description, item.PLCName);
@@ -92,7 +84,7 @@ namespace PLCTools.Models
             {
                 OPCItems oPCItems = this.GetTagItem(list[i].Tag);
                 if (oPCItems.Quality < 192) Quality = "Bad";
-                if(list[i].Value != oPCItems.Value)
+                if (list[i].Value != oPCItems.Value)
                 {
                     list[i].Value = oPCItems.Value;
                     TransationSum += 1;
@@ -101,7 +93,38 @@ namespace PLCTools.Models
                 list[i].Quality = oPCItems.Quality;
             }
         }
+        public void GetData(ref BindingList<OPCItems> list)
+        {
+            if (TotalItemNumber != list.Count)
+            {
+                opcgrp_arrayQualities = new int[0];
+                opcgrp_arrayHandles = new Int32[0];
+                opcgrp_arraySHandles = new int[0];
+                opcgrp_arrayErrors = new int[0];
+                opcgrp_arrayValues = new int[0];
+                opcgrp_arrayPaths = new string[0];
+                opcgrp_itemVar = new OPCItems[0];
+                TotalItemNumber = 0;
+                foreach (OPCItems item in list)
+                {
+                    AddItem(item.Tag, item.Address, item.Description, item.PLCName);
+                    this.Create();
+                }
+            }
+            this.GetData();
+            for (int i = 0; i < list.Count; i++)
+            {
+                OPCItems oPCItems = this.GetTagItem(list[i].Tag);
+                if (oPCItems.Quality < 192) Quality = "Bad";
+                if (list[i].Value != oPCItems.Value)
+                {
+                    list[i].Value = oPCItems.Value;
+                    TransationSum += 1;
 
+                }
+                list[i].Quality = oPCItems.Quality;
+            }
+        }
         public void PutData(List<OPCItems> list)
         {
             System.Array str = new object[list.Count + 1];
@@ -114,7 +137,6 @@ namespace PLCTools.Models
             this.PutData(str);
             TransationSum = list.Count;
         }
-
         public Boolean AddItem(string newTag, string newAddress, string newDescprition, string newPLCName = null)
         {
             TotalItemNumber++;
@@ -325,7 +347,6 @@ namespace PLCTools.Models
                 return null;
             }
         }
-
         private int SearchTag(string tag)
         {
             for (int i = 1; i <= TotalItemNumber; i++)
