@@ -18,8 +18,6 @@ namespace PLCTools.Service
             //
             // TODO: Add constructor logic here
             //
-            this.OleConnectionStringSource = Panel.strConnectionSource;
-            this.OleConnectionStringTarget = Panel.strConnectionTarget;
         }
         public OleDbConnection GetOleConnection(string taget_source)
         {

@@ -168,13 +168,8 @@ namespace PLCTools.Service
         }
 
         #endregion
+        internal string strPlcHeartBeatMinute { get; set; }
 
-        public DspProcess()
-        {
-            //
-            // TODO: Add constructor logic here
-            //
-        }
         public DspProcess(ArrayList pa_parmList)
         {
             //
@@ -256,7 +251,13 @@ namespace PLCTools.Service
         }
         public int ProcessMain()
         {
-            dbcomm = new DbCommon();
+            dbcomm = new DbCommon()
+            {
+                OleConnectionStringSource = strConnectionSource,
+                OleConnectionStringTarget = strConnectionTarget,
+                strActionLogPath = this.strActionLogPath,
+                strActionLogDeleteDays = this.strActionLogDeleteDays
+            };
             oleCnn = dbcomm.GetOleConnection("TARGET");
             oleSrcCnn = dbcomm.GetOleConnection("SOURCE");
             int li_return = 1;
@@ -2126,7 +2127,7 @@ namespace PLCTools.Service
 
                             actionLog("DspProcess:DspPLCHeartBeat:", "PLC heartbeat time span in minutes: " + li_timespan_curr.ToString());
 
-                            int li_beat_timeout = Int32.Parse(Panel.strPlcHeartBeatMinute);
+                            int li_beat_timeout = Int32.Parse(strPlcHeartBeatMinute);
 
                             if (li_timespan_curr >= li_beat_timeout)
                             {
@@ -2960,7 +2961,7 @@ namespace PLCTools.Service
 
                                 actionLog("DspProcess:DspFlinkCount:", "Count Down time span in minutes: " + li_timespan_curr.ToString());
 
-                                int li_beat_timeout = Int32.Parse(Panel.strPlcHeartBeatMinute);
+                                int li_beat_timeout = Int32.Parse(strPlcHeartBeatMinute);
 
                                 //check time out
                                 if (li_timespan_curr >= li_beat_timeout)
@@ -3122,7 +3123,7 @@ namespace PLCTools.Service
 
                                 actionLog("DspProcess:DspFlinkCount:", "PLC Count Up time span minutes: " + li_timespan_curr.ToString());
 
-                                int li_beat_timeout = Int32.Parse(Panel.strPlcHeartBeatMinute);
+                                int li_beat_timeout = Int32.Parse(strPlcHeartBeatMinute);
 
                                 if (li_timespan_curr >= li_beat_timeout)
                                 {

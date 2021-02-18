@@ -16,6 +16,8 @@ namespace PLCTools.Common
         public static Queue<Logging> WarningQ { get; set; } = new Queue<Logging>();
         public static Queue<Logging> ErrorQ { get; set; } = new Queue<Logging>();
         public static List<OPCController> OPCControllers { get; set; } = new List<OPCController>();
+        public static Queue<string> dspBatchLog { get; set; } = new Queue<string>();
+        public static Queue<string> dspBatchMail { get; set; } = new Queue<string>();
 
         public static string CfgConn { get; set; }
         public static string DestConn { get; set; }

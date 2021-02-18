@@ -10,7 +10,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Timer = System.Timers.Timer;
 
 namespace PLCTools
 {
@@ -20,9 +19,6 @@ namespace PLCTools
         delegate void SetTextCallback(Control control, string text);
         delegate void SetEnableCallback(Control control, bool state);
         internal static Queue<string> PlcAutoLog { get; set; } = new Queue<string>();
-        public static Queue<string> dspBatchLog { get; set; } = new Queue<string>();
-        public static Queue<string> dspBatchMessage { get; set; } = new Queue<string>();
-        public static Queue<string> dspBatchMail { get; set; } = new Queue<string>();
         private bool _isStarting { get; set; } = false;
         private DspBatch batch = new DspBatch();
         private OPC2Queue _ws;
@@ -30,25 +26,6 @@ namespace PLCTools
         private PLCAutomation _plcAuto;
         private string _connOPC { get; set; }
         private string _connMSS { get; set; }
-        public static string strActionLogPath { get; set; }
-        public static string strActionLogDeleteDays { get; set; }
-        public static string strConnectionSource { get; set; }
-        public static string strConnectionTarget { get; set; }
-        public static string strMailHost { get; set; }
-        public static string strTimerSecond { get; set; }
-        public static string strServerIP { get; set; }
-        public static string strSendPort { get; set; }
-        public static string strMailFrom { get; set; }
-        public static string strMailLogin { get; set; }
-        public static int strMailPort { get; set; }
-        public static string strMailTo { get; set; }
-        public static bool isSendMail { get; set; }
-        public static bool isSSLMail { get; set; }
-        public static string strPlcHeartBeatMinute { get; set; }
-        public static string strWinMsgSendInd { get; set; }
-        public static string strMailPass { get; set; }
-        private static bool _dspBatchState { get; set; } = false;
-        private static bool _dspBatchSubState { get; set; } = false;
         internal static Dictionary<string, string> messages { get; set; } = new Dictionary<string, string> {
             { "OPENCONN","reading from DB"},
             { "RETRIVE","Retriving data from database" },
@@ -79,6 +56,7 @@ namespace PLCTools
             {14, "DSP_DISPATCH_OFF" }
         };
         private static Dictionary<string, Control> leds { get; set; } = new Dictionary<string, Control>();
+        private static bool[] busyLeds = new bool[17];
         public Panel()
         {
             InitializeComponent();
@@ -175,111 +153,107 @@ namespace PLCTools
                 Control label = leds["L" + idx];
                 Control transLed = leds["T" + idx];
                 Control xcieveLed = leds["X" + idx];
-                while (_isStarting)
+                try
                 {
-                    try
+                    busyLeds[idx] = true;
+                    if (IntData.OPCControllers.Count >= idx)
                     {
-                        if (IntData.OPCControllers.Count >= idx)
+                        OPCController item = IntData.OPCControllers[idx - 1];
+                        if (item != null)
                         {
-                            OPCController item = IntData.OPCControllers[idx - 1];
-                            if (item != null)
+                            if (!label.Enabled)
                             {
-                                if (!label.Enabled)
+                                setEnabled(label, true);
+                                setEnabled(transLed, true);
+                                setEnabled(xcieveLed, true);
+                            }
+                            if (item.GroupName != label.Text)
+                            {
+                                setText(label, item.GroupName);
+                            }
+                            if (transLed.BackColor == Color.DimGray)
+                            {
+                                if (item.TransactionFlag)
                                 {
-                                    setEnabled(label, true);
-                                    setEnabled(transLed, true);
-                                    setEnabled(xcieveLed, true);
+                                    transLed.BackColor = Color.Lime;
+                                    Thread.Sleep(200);
                                 }
-                                if (item.GroupName != label.Text)
-                                {
-                                    setText(label, item.GroupName);
-                                }
-                                if (transLed.BackColor == Color.DimGray)
-                                {
-                                    if (item.TransactionFlag)
-                                    {
-                                        transLed.BackColor = Color.Lime;
-                                        Thread.Sleep(200);
-                                    }
-                                }
-                                else
-                                {
-                                    if (!item.Transacting)
-                                    {
-                                        item.TransactionFlag = false;
-                                        transLed.BackColor = Color.DimGray;
-                                        Thread.Sleep(50);
-                                        for (int i = 0; i < item.TransationSum; i++)
-                                        {
-                                            if (item.Quality == "Good")
-                                            {
-                                                xcieveLed.BackColor = Color.Lime;
-                                            }
-                                            else
-                                            {
-                                                xcieveLed.BackColor = Color.Crimson;
-                                            }
-                                            Thread.Sleep(200 / item.TransationSum);
-                                            xcieveLed.BackColor = Color.DimGray;
-                                            Thread.Sleep(200 / item.TransationSum);
-                                        }
-                                    }
-                                }
-
                             }
                             else
                             {
-                                if (xcieveLed.Text != "(EMPTY)")
+                                if (!item.Transacting)
                                 {
-                                    setText(label, "(EMPTY)");
-                                    xcieveLed.BackColor = Color.DimGray;
+                                    item.TransactionFlag = false;
                                     transLed.BackColor = Color.DimGray;
-                                    setEnabled(label, false);
-                                    setEnabled(transLed, false);
-                                    setEnabled(xcieveLed, false);
+                                    Thread.Sleep(50);
+                                    for (int i = 0; i < item.TransationSum; i++)
+                                    {
+                                        if (item.Quality == "Good")
+                                        {
+                                            xcieveLed.BackColor = Color.Lime;
+                                        }
+                                        else
+                                        {
+                                            xcieveLed.BackColor = Color.Crimson;
+                                        }
+                                        Thread.Sleep(200 / item.TransationSum);
+                                        xcieveLed.BackColor = Color.DimGray;
+                                        Thread.Sleep(200 / item.TransationSum);
+                                    }
                                 }
                             }
+
                         }
                         else
                         {
-                            if (label.Text != "(READY)")
+                            if (xcieveLed.Text != "(EMPTY)")
                             {
-                                if (transLed.BackColor == Color.Lime)
-                                {
-                                    transLed.BackColor = Color.DimGray;
-                                    Thread.Sleep(50);
-                                    xcieveLed.BackColor = Color.Lime;
-                                    Thread.Sleep(200);
-                                    xcieveLed.BackColor = Color.DimGray;
-                                }
-                                if (label.Text != "Channel " + idx) Thread.Sleep(500);
-                                setText(label, "(READY)");
+                                setText(label, "(EMPTY)");
+                                xcieveLed.BackColor = Color.DimGray;
+                                transLed.BackColor = Color.DimGray;
                                 setEnabled(label, false);
                                 setEnabled(transLed, false);
                                 setEnabled(xcieveLed, false);
                             }
                         }
                     }
-                    catch
+                    else
                     {
-                        if (label.Text != "ERROR")
+                        if (label.Text != "(READY)")
                         {
-                            setText(xcieveLed, "ERROR");
-                            xcieveLed.BackColor = Color.DimGray;
-                            transLed.BackColor = Color.DimGray;
+                            if (transLed.BackColor == Color.Lime)
+                            {
+                                transLed.BackColor = Color.DimGray;
+                                Thread.Sleep(50);
+                                xcieveLed.BackColor = Color.Lime;
+                                Thread.Sleep(200);
+                                xcieveLed.BackColor = Color.DimGray;
+                            }
+                            if (label.Text != "Channel " + idx) Thread.Sleep(500);
+                            setText(label, "(READY)");
                             setEnabled(label, false);
                             setEnabled(transLed, false);
                             setEnabled(xcieveLed, false);
                         }
                     }
-                    Thread.Sleep(50);
+
                 }
-                setText(label, "Channel " + idx);
-                xcieveLed.BackColor = Color.DimGray;
-                transLed.BackColor = Color.DimGray;
-                setEnabled(label, false);
-                setEnabled(transLed, false);
-                setEnabled(xcieveLed, false);
+                catch
+                {
+                    if (label.Text != "ERROR")
+                    {
+                        setText(xcieveLed, "ERROR");
+                        xcieveLed.BackColor = Color.DimGray;
+                        transLed.BackColor = Color.DimGray;
+                        setEnabled(label, false);
+                        setEnabled(transLed, false);
+                        setEnabled(xcieveLed, false);
+                    }
+                }
+                finally
+                {
+                    busyLeds[idx] = false;
+                }
             });
         }
         private async void refreshControls()
@@ -451,21 +425,25 @@ namespace PLCTools
             _plcAuto.PLCData = await Task.Run(() => initPLCData());
             var t = Task.Run(() =>
             {
-                for (int i = 1; i <= 16; i++)
+                while (_isStarting)
                 {
-                    refreshIndicators(i);
-                    Thread.Sleep(20);
+                    for (int i = 1; i <= 16; i++)
+                    {
+                        if (!busyLeds[i])
+                        {
+                            refreshIndicators(i);
+                        }
+                    }
+                    Thread.Sleep(1000);
                 }
             });
             IntData.InitializeData();
             var source = new BindingSource(_plcAuto.PLCData, null);
             PLCDataGrid.DataSource = source;
-            await t;
             _connOPC = "Data Source='" + this.DBAddr.Text + "'; Initial Catalog='OPC2DBMS';User id='" + this.DBUser.Text + "'; Password='" + this.DBPwd.Text + "';";
             _connMSS = "Data Source='" + this.DBAddr.Text + "'; Initial Catalog='MSS';User id='" + this.DBUser.Text + "'; Password='" + this.DBPwd.Text + "';";
             if (_ws == null) _ws = new OPC2Queue(_connOPC, _connMSS);
             if (_q2DB == null) _q2DB = new Queue2DB(_connMSS);
-            progressBar1.Visible = false;
             toggleStartButtons(true);
             var t1 = Task.Run(() =>
             {
@@ -499,9 +477,9 @@ namespace PLCTools
                     }
                     if (DSPbatchSwitch.fetch)
                     {
-                        if (!_dspBatchState) DSPBatchStart_Click(sender, e);
+                        if (!batch.isConnecting) DSPBatchStart_Click(sender, e);
                         DSPbatchSwitch.fetch = false;
-                        _dspBatchState = DSPbatchSwitch.isSwitch;
+                        batch.isConnecting = DSPbatchSwitch.isSwitch;
                     }
                     if (PLCSimulatorSwitch.isSwitch != _plcAuto.isConnecting || PLCSimulatorSwitch.Pending)
                     {
@@ -522,13 +500,19 @@ namespace PLCTools
                         setEnabled(Queue2DBStop, _q2DB.isConnecting);
                         setEnabled(Queue2DBStart, !_q2DB.isConnecting);
                     }
-                    if (DSPbatchSwitch.isSwitch != _dspBatchState || DSPbatchSwitch.Pending) DSPbatchSwitch.value = _dspBatchState ? 1 : 0;
-                    Thread.Sleep(100);
+                    if (DSPbatchSwitch.isSwitch != batch.isConnecting || DSPbatchSwitch.Pending)
+                    {
+                        DSPbatchSwitch.value = batch.isConnecting ? 1 : 0;
+                        setEnabled(DSPBatchStart, !batch.isConnecting);
+                        setEnabled(DSPBatchStop, batch.isConnecting);
+                        setEnabled(DSPBatchControl, !batch.isConnecting);
+                    }
+                    Thread.Sleep(200);
                 }
             });
-            await t1;
-            this.ControlBox = true;
             progressBar1.Visible = false;
+            await t1;
+            this.ControlBox = true;            
         }
         private void Stop_Click(object sender, EventArgs e)
         {
@@ -581,40 +565,40 @@ namespace PLCTools
         }
         private async void DSPBatchStart_Click(object sender, EventArgs e)
         {
-            _dspBatchState = true;
-            _dspBatchSubState = true;
-            setEnabled(DSPBatchStart, false);
-            setEnabled(DSPBatchStop, true);
-            setEnabled(DSPBatchControl, false);
-            strSendPort = SendPort.Text;
-            strServerIP = ServerIP.Text;
-            strMailFrom = MailFrom.Text;
-            strMailTo = MailTo.Text;
-            strMailLogin = MailSMTPUserId.Text;
-            strMailPort = Convert.ToInt32(MailSMTPort.Text);
-            strMailHost = MailSMTPServer.Text;
-            strTimerSecond = TimerSecond.Text;
-            strConnectionSource = "Provider=SQLNCLI11;Persist Security Info=False;Data Source=" + this.DBAddr.Text + ";User ID=" + this.DBUser.Text + ";pwd=" + this.DBPwd.Text + ";Initial Catalog=GNA_IESO";
-            strConnectionTarget = "Provider=SQLNCLI11;Persist Security Info=False;Data Source=" + this.DBAddr.Text + ";User ID=" + this.DBUser.Text + ";pwd=" + this.DBPwd.Text + ";Initial Catalog=MSS";
-            strWinMsgSendInd = WinMsgSendInd.Text;
-            strActionLogPath = ActionLogPath.Text;
-            strActionLogDeleteDays = ActionLogDeleteDays.Text;
-            strPlcHeartBeatMinute = PlcHeartBeatMinute.Text;
-            isSendMail = isSendEmail.Checked;
-            isSSLMail = isEmailSSL.Checked;
-            strMailPass = emailPassword.Text;
-            batch.OnStart();
+            batch = new DspBatch()
+            {
+                isConnecting = true,
+                _dspBatchSubState = true,
+                strSendPort = SendPort.Text,
+                strServerIP = ServerIP.Text,
+                strMailFrom = MailFrom.Text,
+                strMailTo = MailTo.Text,
+                strMailLogin = MailSMTPUserId.Text,
+                strMailPort = Convert.ToInt32(MailSMTPort.Text),
+                strMailHost = MailSMTPServer.Text,
+                strTimerSecond = TimerSecond.Text,
+                strConnectionSource = "Provider=SQLNCLI11;Persist Security Info=False;Data Source=" + this.DBAddr.Text + ";User ID=" + this.DBUser.Text + ";pwd=" + this.DBPwd.Text + ";Initial Catalog=GNA_IESO",
+                strConnectionTarget = "Provider=SQLNCLI11;Persist Security Info=False;Data Source=" + this.DBAddr.Text + ";User ID=" + this.DBUser.Text + ";pwd=" + this.DBPwd.Text + ";Initial Catalog=MSS",
+                strWinMsgSendInd = WinMsgSendInd.Text,
+                strActionLogPath = ActionLogPath.Text,
+                strActionLogDeleteDays = ActionLogDeleteDays.Text,
+                strPlcHeartBeatMinute = PlcHeartBeatMinute.Text,
+                isSendMail = isSendEmail.Checked,
+                isSSLMail = isEmailSSL.Checked,
+                strMailPass = emailPassword.Text
+            };
+            batch.OnStartAsync();
             var t = Task.Run(() =>
             {
                 string text = "";
-                while (_dspBatchSubState || dspBatchLog.Count > 0)
+                while (batch._dspBatchSubState || IntData.dspBatchLog.Count > 0)
                 {
-                    if (!_dspBatchState && _dspBatchSubState)
+                    if (!batch.isConnecting && batch._dspBatchSubState)
                     {
                         batch.OnStop();
-                        _dspBatchSubState = false;
+                        batch._dspBatchSubState = false;
                     }
-                    if (dspBatchLog.Count > 0) text = dspBatchLog.Dequeue() + Environment.NewLine + text;
+                    if (IntData.dspBatchLog.Count > 0) text = IntData.dspBatchLog.Dequeue() + Environment.NewLine + text;
                     if (text.Split('\r').Length > 22)
                     {
                         text = text.Remove(text.LastIndexOf(Environment.NewLine));
@@ -633,9 +617,9 @@ namespace PLCTools
             var t1 = Task.Run(() =>
             {
                 string text = "";
-                while (_dspBatchSubState || dspBatchMessage.Count > 0)
+                while (batch._dspBatchSubState || batch.dspBatchMessage.Count > 0)
                 {
-                    if (dspBatchMessage.Count > 0) text = dspBatchMessage.Dequeue() + Environment.NewLine + text;
+                    if (batch.dspBatchMessage.Count > 0) text = batch.dspBatchMessage.Dequeue() + Environment.NewLine + text;
                     if (text.Split('\r').Length > 20)
                     {
                         text = text.Remove(text.LastIndexOf(Environment.NewLine));
@@ -654,9 +638,9 @@ namespace PLCTools
             var t2 = Task.Run(() =>
             {
                 string text = "";
-                while (_dspBatchSubState || dspBatchMail.Count > 0)
+                while (batch._dspBatchSubState || IntData.dspBatchMail.Count > 0)
                 {
-                    if (dspBatchMail.Count > 0) text = dspBatchMail.Dequeue() + Environment.NewLine + text;
+                    if (IntData.dspBatchMail.Count > 0) text = IntData.dspBatchMail.Dequeue() + Environment.NewLine + text;
                     if (text.Split('\r').Length > 20)
                     {
                         text = text.Remove(text.LastIndexOf(Environment.NewLine));
@@ -675,13 +659,10 @@ namespace PLCTools
             await t;
             await t1;
             await t2;
-            setEnabled(DSPBatchStart, true);
-            setEnabled(DSPBatchStop, false);
-            setEnabled(DSPBatchControl, true);
         }
         private void DSPBatchStop_Click(object sender, EventArgs e)
         {
-            _dspBatchState = false;
+            batch.OnStop();
         }
         private void OPCClientStart_Click(object sender, EventArgs e)
         {

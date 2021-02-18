@@ -7,11 +7,33 @@ using System.Timers;
 using System.ComponentModel;
 using PLCTools.Service;
 using System.Collections.Generic;
+using PLCTools.Common;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PLCTools.Components
 {
-    public class DspBatch
+    public class DspBatch : Misc
     {
+        internal bool _dspBatchSubState { get; set; } = false;
+        internal Queue<string> dspBatchMessage { get; set; } = new Queue<string>();
+        internal string strActionLogPath { get; set; }
+        internal string strActionLogDeleteDays { get; set; }
+        internal string strConnectionSource { get; set; }
+        internal string strConnectionTarget { get; set; }
+        internal string strMailHost { get; set; }
+        internal string strTimerSecond { get; set; }
+        internal string strServerIP { get; set; }
+        internal string strSendPort { get; set; }
+        internal string strMailFrom { get; set; }
+        internal string strMailLogin { get; set; }
+        internal int strMailPort { get; set; }
+        internal string strMailTo { get; set; }
+        internal bool isSendMail { get; set; }
+        internal bool isSSLMail { get; set; }
+        internal string strPlcHeartBeatMinute { get; set; }
+        internal string strWinMsgSendInd { get; set; }
+        internal string strMailPass { get; set; }
         /// <summary>
         /// Required designer variable.
         ///
@@ -22,8 +44,9 @@ namespace PLCTools.Components
         private Container components = null;
         private OleDbConnection dboleSourceConnection;
         private OleDbConnection dboleTargetConnection;
-        private Timer Timer1;
+        private System.Timers.Timer Timer1;
         private BaseClass baseService = new BaseClass();
+
         private int ii_process_no { get; set; } = 0;
         private DateTime _plcbeat_dateprev;
         private DateTime _plcbeat_datecurr;
@@ -179,7 +202,13 @@ namespace PLCTools.Components
             {
                 if (dboleSourceConnection == null)
                 {
-                    DbCommon dbcomm = new DbCommon();
+                    DbCommon dbcomm = new DbCommon()
+                    {
+                        OleConnectionStringSource = strConnectionSource,
+                        OleConnectionStringTarget = strConnectionTarget,
+                        strActionLogPath = this.strActionLogPath,
+                        strActionLogDeleteDays = this.strActionLogDeleteDays
+                    };
                     dboleSourceConnection = dbcomm.GetOleConnection("SOURCE");
                     dbcomm = null;
                 }
@@ -194,7 +223,13 @@ namespace PLCTools.Components
             {
                 if (dboleTargetConnection == null)
                 {
-                    DbCommon dbcomm = new DbCommon();
+                    DbCommon dbcomm = new DbCommon()
+                    {
+                        OleConnectionStringSource = strConnectionSource,
+                        OleConnectionStringTarget = strConnectionTarget,
+                        strActionLogPath = this.strActionLogPath,
+                        strActionLogDeleteDays = this.strActionLogDeleteDays
+                    };
                     dboleTargetConnection = dbcomm.GetOleConnection("TARGET");
                     dbcomm = null;
                 }
@@ -226,7 +261,20 @@ namespace PLCTools.Components
         public DspBatch()
         {
             // This call is required by the Windows.Forms Component Designer.
-            InitializeComponent();
+            baseService = new BaseClass()
+            {
+                strMailTo = this.strMailTo,
+                strMailPort = this.strMailPort,
+                strMailLogin = this.strMailLogin,
+                strMailPass = this.strMailPass,
+                strMailHost = this.strMailHost,
+                strMailFrom = this.strMailFrom,
+                isSendMail = this.isSendMail,
+                isSSLMail = this.isSSLMail,
+                strConnectionSource = this.strConnectionSource,
+                strConnectionTarget = this.strConnectionTarget
+            };
+            InitializeComponent(); 
         }
 
         /// <summary>
@@ -242,38 +290,35 @@ namespace PLCTools.Components
         /// <summary>
         /// Set things in motion so your service can do its work.
         /// </summary>
-        public void OnStart()
+        public async void OnStartAsync()
         {
             // TODO: Add code here to start your service.
-            Panel.dspBatchLog.Enqueue("Application Starting...");
-            Panel.dspBatchMessage.Enqueue("Application Starting...");
-            Panel.dspBatchMail.Enqueue("Application Starting...");
+            IntData.dspBatchLog.Enqueue("Application Starting...");
+            dspBatchMessage.Enqueue("Application Starting...");
             CreateTimer();
             this.PlcCntWrDatePrev = baseService.getStndSummerDateTime();
             this.PlcCntDownDatePrev = baseService.getStndSummerDateTime();
             this.PlcCntUpDatePrev = baseService.getStndSummerDateTime();
-        }
-
-        /// <summary>
-        /// Stop this service.
-        /// </summary>
-        public void OnStop()
-        {
-            // TODO: Add code here to perform any tear-down necessary to stop your service.
+            await Task.Run(() =>
+            {
+                while (isConnecting)
+                {
+                    Thread.Sleep(1000);
+                }
+            });
             if (Timer1 != null) Timer1.Enabled = false;
             baseService.actionLog("DspBatch.cs:OnStop", "timer event has been stoped.");
-            Panel.dspBatchMail.Enqueue("DspBatch has been stoped.");
-            Panel.dspBatchMessage.Enqueue("DspBatch has been stoped.");
+            dspBatchMessage.Enqueue("DspBatch has been stoped.");
         }
 
         private void CreateTimer()
         {
             int li_second_setting = 0;
 
-            Timer1 = new Timer();
+            Timer1 = new System.Timers.Timer();
             Timer1.Enabled = true;
 
-            li_second_setting = Int32.Parse(Panel.strTimerSecond);
+            li_second_setting = Int32.Parse(strTimerSecond);
 
             Timer1.Interval = (1000) * (li_second_setting);
             Timer1.Elapsed += new ElapsedEventHandler(Timer1_Elapsed);
@@ -310,7 +355,11 @@ namespace PLCTools.Components
         ///
         public void dspBatchProcess(string source, string event_desc)
         {
-            ClientMsg clientmsg = new ClientMsg();
+            ClientMsg clientmsg = new ClientMsg()
+            {
+                port = Int32.Parse(strSendPort),
+                server = strServerIP
+            };
             string ls_strinf_datetime = "";
 
             DateTime ld_datetime = DateTime.Parse("Jan01,1990");
@@ -352,7 +401,22 @@ namespace PLCTools.Components
                 IFormatProvider format = new CultureInfo("fr-FR", true);
                 ls_strinf_datetime = ld_datetime.ToString(format);
 
-                DspProcess dspProcess = new DspProcess(parmList);
+                DspProcess dspProcess = new DspProcess(parmList)
+                {
+                    strMailTo = this.strMailTo,
+                    strMailPort = this.strMailPort,
+                    strMailLogin = this.strMailLogin,
+                    strMailPass = this.strMailPass,
+                    strMailHost = this.strMailHost,
+                    strMailFrom = this.strMailFrom,
+                    isSendMail = this.isSendMail,
+                    isSSLMail = this.isSSLMail,
+                    strPlcHeartBeatMinute = this.strPlcHeartBeatMinute,
+                    strConnectionSource = this.strConnectionSource,
+                    strConnectionTarget = this.strConnectionTarget,
+                    strActionLogPath = this.strActionLogPath,
+                    strActionLogDeleteDays = this.strActionLogDeleteDays
+                };
                 //call main process functions
                 try
                 {
@@ -387,8 +451,8 @@ namespace PLCTools.Components
                         }
 
                         //get wind message send indicator
-                        ls_win_msg_send_ind = Panel.strWinMsgSendInd.ToUpper();
-                        Panel.dspBatchMessage.Enqueue(ls_strinf_datetime);
+                        ls_win_msg_send_ind = strWinMsgSendInd.ToUpper();
+                        dspBatchMessage.Enqueue(ls_strinf_datetime);
                         if (ls_win_msg_send_ind == "Y")
                         {
                             clientmsg.SendMsgToServer(ls_strinf_datetime);

@@ -16,8 +16,8 @@ namespace PLCTools.Service
 		private static Encoding ASCII = Encoding.ASCII;
 
 		// defaults
-		private string server = "localhost";
-		private int port = 9000;
+		internal string server = "localhost";
+		internal int port = 9000;
 		private bool loggedin = false;
 		private Socket clientSocket = null;
 
@@ -28,9 +28,6 @@ namespace PLCTools.Service
 			//
 			// TODO: Add constructor logic here
 			//
-
-			this.port = Int32.Parse(Panel.strSendPort);
-			this.server = Panel.strServerIP;
 		}
 
 		public void SendMsgToServer(string data)

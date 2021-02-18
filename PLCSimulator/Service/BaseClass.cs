@@ -5,6 +5,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Data.OleDb;
 using System.Windows.Forms;
+using PLCTools.Common;
 
 namespace PLCTools.Service
 {
@@ -13,6 +14,18 @@ namespace PLCTools.Service
     /// </summary>
     public class BaseClass
     {
+        internal string strMailTo { get; set; }
+        internal int strMailPort { get; set; }
+        internal string strMailLogin { get; set; }
+        internal string strMailPass { get; set; }
+        internal string strMailHost { get; set; }
+        internal string strMailFrom { get; set; }
+        internal bool isSendMail { get; set; }
+        internal bool isSSLMail { get; set; }
+        public string strActionLogPath { get; set; }
+        internal string strActionLogDeleteDays { get; set; }
+        internal string strConnectionSource { get; set; }
+        internal string strConnectionTarget { get; set; }
         public BaseClass()
         {
             //
@@ -64,8 +77,27 @@ namespace PLCTools.Service
             DataTable dt1;
             dt = new DataTable();
             dt1 = new DataTable();
-            DbCommon dbcomm = new DbCommon();
-            BaseMail msgMail = new BaseMail();
+            DbCommon dbcomm = new DbCommon()
+            {
+                OleConnectionStringSource = strConnectionSource,
+                OleConnectionStringTarget = strConnectionTarget,
+                strActionLogPath = this.strActionLogPath,
+                strActionLogDeleteDays = this.strActionLogDeleteDays
+            };
+            BaseMail msgMail = new BaseMail() {
+                strMailTo = this.strMailTo,
+                strMailPort = this.strMailPort,
+                strMailLogin = this.strMailLogin,
+                strMailPass = this.strMailPass,
+                strMailHost = this.strMailHost,
+                strMailFrom = this.strMailFrom,
+                isSendMail = this.isSendMail,
+                isSSLMail = this.isSSLMail,
+                strConnectionSource = this.strConnectionSource,
+                strConnectionTarget = this.strConnectionTarget,
+                strActionLogPath = this.strActionLogPath,
+                strActionLogDeleteDays = this.strActionLogDeleteDays
+            };
             string ls_actscenario = "";
             string ls_act_count = "";
             int li_return = 0;
@@ -234,7 +266,20 @@ namespace PLCTools.Service
         public int sendEmail(string subject, string msgText)
         {
             int li_return = 0;
-            BaseMail msgMail = new BaseMail();
+            BaseMail msgMail = new BaseMail() {
+                strMailTo = this.strMailTo,
+                strMailPort = this.strMailPort,
+                strMailLogin = this.strMailLogin,
+                strMailPass = this.strMailPass,
+                strMailHost = this.strMailHost,
+                strMailFrom = this.strMailFrom,
+                isSendMail = this.isSendMail,
+                isSSLMail = this.isSSLMail,
+                strConnectionSource = this.strConnectionSource,
+                strConnectionTarget = this.strConnectionTarget,
+                strActionLogPath = this.strActionLogPath,
+                strActionLogDeleteDays = this.strActionLogDeleteDays
+            };
             try
             {
                 msgMail.sendDefaultEmail(subject, msgText);
@@ -263,7 +308,7 @@ namespace PLCTools.Service
             string actionLogDeletePath = "";
             double logDeleteDays = 7;
             DateTime ldt_deleteDate = DateTime.Parse("Jan01,1990");
-            actionLogPathOrg = Panel.strActionLogPath;
+            actionLogPathOrg = strActionLogPath;
             try
             {
                 actionLogPath = actionLogPathOrg + DateTime.Today.Year.ToString() + DateTime.Today.Month.ToString("00") + DateTime.Today.Day.ToString("00") + DateTime.Now.Hour.ToString("00") + ".log";
@@ -288,35 +333,35 @@ namespace PLCTools.Service
         }
         public void actionLog(string source, string event_desc)
         {
-            string actionLogPath = "";
-            string actionLogPathOrg = "";
-            string actionLogDeletePath = "";
-            double logDeleteDays = 7;
-            DateTime ldt_deleteDate = DateTime.Parse("Jan01,1990");
-            actionLogPathOrg = Panel.strActionLogPath;
-            try
-            {
-                actionLogPath = actionLogPathOrg + DateTime.Today.Year.ToString() + DateTime.Today.Month.ToString("00") + DateTime.Today.Day.ToString("00") + ".log";
-                actionLogPath = actionLogPathOrg + DateTime.Today.Year.ToString() + DateTime.Today.Month.ToString("00") + DateTime.Today.Day.ToString("00") + DateTime.Now.Hour.ToString("00") + ".log";
-                ldt_deleteDate = DateTime.Now.AddDays((-1) * logDeleteDays);
-                for (int i = 0; i < 24; i++)
-                {
-                    actionLogDeletePath = actionLogPathOrg + ldt_deleteDate.Year.ToString() + ldt_deleteDate.Month.ToString("00") + ldt_deleteDate.Day.ToString("00") + i.ToString("00") + ".log";
-                    if (File.Exists(actionLogDeletePath))
-                    {
-                        File.Delete(actionLogDeletePath);
-                    }
-                }
-                FileStream fileStream = new FileStream(actionLogPath, FileMode.Append, FileAccess.Write, FileShare.Write);
-                TextWriter tw = new StreamWriter(fileStream);
-                tw.WriteLine(getStndSummerDateTime().ToString() + " " + source + " " + event_desc);
-                Panel.dspBatchLog.Enqueue(source + " " + event_desc);
-                tw.Close();
-            }
-            catch (Exception ex)
-            {
-                string ls_test = ex.ToString();
-            }
+            //string actionLogPath = "";
+            //string actionLogPathOrg = "";
+            //string actionLogDeletePath = "";
+            //double logDeleteDays = 7;
+            //DateTime ldt_deleteDate = DateTime.Parse("Jan01,1990");
+            //actionLogPathOrg = strActionLogPath;
+            //try
+            //{
+            //    actionLogPath = actionLogPathOrg + DateTime.Today.Year.ToString() + DateTime.Today.Month.ToString("00") + DateTime.Today.Day.ToString("00") + ".log";
+            //    actionLogPath = actionLogPathOrg + DateTime.Today.Year.ToString() + DateTime.Today.Month.ToString("00") + DateTime.Today.Day.ToString("00") + DateTime.Now.Hour.ToString("00") + ".log";
+            //    ldt_deleteDate = DateTime.Now.AddDays((-1) * logDeleteDays);
+            //    for (int i = 0; i < 24; i++)
+            //    {
+            //        actionLogDeletePath = actionLogPathOrg + ldt_deleteDate.Year.ToString() + ldt_deleteDate.Month.ToString("00") + ldt_deleteDate.Day.ToString("00") + i.ToString("00") + ".log";
+            //        if (File.Exists(actionLogDeletePath))
+            //        {
+            //            File.Delete(actionLogDeletePath);
+            //        }
+            //    }
+            //    FileStream fileStream = new FileStream(actionLogPath, FileMode.Append, FileAccess.Write, FileShare.Write);
+            //    TextWriter tw = new StreamWriter(fileStream);
+            //    tw.WriteLine(getStndSummerDateTime().ToString() + " " + source + " " + event_desc);
+                IntData.dspBatchLog.Enqueue(source + " " + event_desc);
+            //    tw.Close();
+            //}
+            //catch (Exception ex)
+            //{
+            //    string ls_test = ex.ToString();
+            //}
         }
         public int getComputerName(ref string ps_computerName, ref string ps_login)
         {

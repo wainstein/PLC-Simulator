@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using PLCTools.Service;
 using PLCTools.Common;
 using PLCTools.Service.InvernalEvents;
+using System.Threading;
 
 namespace PLCTools.Service
 {
@@ -32,8 +33,6 @@ namespace PLCTools.Service
         }
         public void Dispose()
         {
-            OPCEvents = null;
-            TimerEvents = null;
             if (EvGroups != null)
             {
                 foreach (OPCGroup_t opt in EvGroups)

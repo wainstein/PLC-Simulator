@@ -27,7 +27,7 @@ namespace PLCTools.Service
         public bool Transacting { get; set; } = false;
         public bool TransactionFlag { get; set; } = false;
         public string Quality { get; set; } = "Good";
-        public int TransationSum { get; set; } = 0;
+        public int TransationSum { get; set; } = 1;
 
         public OPCController()
         {
@@ -119,7 +119,7 @@ namespace PLCTools.Service
                 if (list[i].Value != oPCItems.Value)
                 {
                     list[i].Value = oPCItems.Value;
-                    TransationSum += 1;
+                    if (TransationSum <= 5) TransationSum += 1;
 
                 }
                 list[i].Quality = oPCItems.Quality;
@@ -241,6 +241,7 @@ namespace PLCTools.Service
                 opcgrp_server.Disconnect();
                 OPCSvr = null;
                 Transacting = false;
+                Thread.Sleep(1000);
                 return true;
             }
             catch (Exception ex)
